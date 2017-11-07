@@ -4,11 +4,11 @@ CC		=powerpc-eabi-gcc
 CXX		=powerpc-eabi-g++
 AS		=powerpc-eabi-as
 
-CFLAGS  = -g -O3 -Wall $(MACHDEP) $(INCLUDE) \
+CXXFLAGS  = -g -O3 -Wall $(MACHDEP) $(INCLUDE) \
 	  -DCPU_SHUTDOWN -DSPC700_SHUTDOWN -DVAR_CYCLES -DSOUND \
 	  -DNOASM -DNGC -DNOASM -DPIXEL_FORMAT=RGB565  \
 	  -fno-exceptions -Wno-unused-parameter -pipe \
-	  -DUSE_GUI -DWII -DHW_RVL -DGLN64_GX -DAIDUMP -DUSE_EXPANSION \
+	  -DUSE_GUI -DWII -DHW_RVL -D__wii__ -DGLN64_GX -DAIDUMP -DUSE_EXPANSION \
 	  -DTHREADED_AUDIO -DUSE_RECOMP_CACHE -DPPC_DYNAREC -DFASTMEM -DMENU_V2\
 	  -DRELEASE #-DSHOW_DEBUG #-DPRINTGECKO #-DPROFILE #-DDEBUGON #-DUSE_TLB_CACHE \
 	  #-DNO_BT -DUSE_ROM_CACHE_L1 -DPRINTGECKO -DGLN64_SDLOG -DEMBEDDED_FONTS -DUSE_EXPANSION -DSHOW_STATS
@@ -16,10 +16,10 @@ CFLAGS  = -g -O3 -Wall $(MACHDEP) $(INCLUDE) \
 MACHDEP	= -DGEKKO -mcpu=750 -meabi -mhard-float 
 LDFLAGS	=	$(MACHDEP) -mrvl -Wl,-Map,$(notdir $@).map -Wl,--cref
 
-INCLUDE = -I$(DEVKITPRO)/libogc/include -I$(DEVKITPRO)/libfat/libogc/include
-LIBPATHS = -L$(DEVKITPRO)/libogc/lib/wii -L$(DEVKITPRO)/libfat/libogc/lib/wii
+INCLUDE = -I$(DEVKITPRO)/libogc/include -I$(DEVKITPRO)/portlibs/ppc/include 
+LIBPATHS = -L$(DEVKITPRO)/libogc/lib/wii -L$(DEVKITPRO)/portlibs/ppc/lib
 
-CXXFLAGS	=$(CFLAGS)
+CFLAGS	=$(CXXFLAGS) -fgnu89-inline
 
 #GL_PATH		=-I/usr/X11R6/include
 
@@ -94,8 +94,9 @@ OBJ		=main/rom_gc.o \
 		main/md5.o \
 		main/savestates_gc.o \
 		r4300/profile.o \
-		main/adler32.o
-		
+		main/adler32.o \
+		main/usbthread.o
+
 OBJ_PPC		=r4300/ppc/MIPS-to-PPC.o \
 		r4300/ppc/Recompile.o \
 		r4300/ppc/Wrappers.o \
@@ -105,6 +106,7 @@ OBJ_PPC		=r4300/ppc/MIPS-to-PPC.o \
 OBJ_INPUT	=gc_input/main.o \
 		gc_input/controller-GC.o \
 		gc_input/controller-Classic.o \
+		gc_input/controller-DRC.o \
 		gc_input/controller-WiimoteNunchuk.o
 
 OBJ_RSPHLE	=rsp_hle/main.o \
@@ -163,7 +165,7 @@ HEADER		=main/rom.h \
 		r4300/recomp.h \
 		gc_memory/pif.h
 
-LIB		=	-ldi -lm -lfat -ldb -lwiiuse -lbte -logc -lz
+LIB		=	-ldi -lm -lfat -ldb -lwiidrc -lwiiuse -lbte -logc -lz
 
 ifeq ($(strip mupen64_GX_gfx/main.cpp),)
 	export LD	:=	$(CC)
@@ -195,91 +197,91 @@ gc_audio/main.o:		gc_audio/audio.c
 				$(CC) $(CFLAGS) -c -o $@ $<
 
 glN64_GX/glN64.o:			glN64_GX/glN64.cpp
-				$(CXX) $(CFLAGS) -DMAINDEF -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -DMAINDEF -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/Config_linux.o:		glN64_GX/Config_linux.cpp
-				$(CXX) $(CFLAGS) $(GTK_FLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) $(GTK_FLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/OpenGL.o:			glN64_GX/OpenGL.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/N64.o:			glN64_GX/N64.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/RSP.o:			glN64_GX/RSP.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/VI.o:			glN64_GX/VI.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/Textures.o:		glN64_GX/Textures.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/FrameBuffer.o:		glN64_GX/FrameBuffer.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/Combiner.o:		glN64_GX/Combiner.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/gDP.o:			glN64_GX/gDP.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/gSP.o:			glN64_GX/gSP.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/GBI.o:			glN64_GX/GBI.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/DepthBuffer.o:			glN64_GX/DepthBuffer.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/CRC.o:			glN64_GX/CRC.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/2xSAI.o:			glN64_GX/2xSAI.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/TEV_combiner.o: glN64_GX/TEV_combiner.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/RDP.o:			glN64_GX/RDP.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/F3D.o:			glN64_GX/F3D.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/F3DEX.o:		glN64_GX/F3DEX.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/F3DEX2.o:			glN64_GX/F3DEX2.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/L3D.o:			glN64_GX/L3D.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/L3DEX.o:			glN64_GX/L3DEX.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/L3DEX2.o:			glN64_GX/L3DEX2.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/S2DEX.o:			glN64_GX/S2DEX.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/S2DEX2.o:			glN64_GX/S2DEX2.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/F3DPD.o:			glN64_GX/F3DPD.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/F3DDKR.o:			glN64_GX/F3DDKR.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 glN64_GX/F3DWRUS.o:		glN64_GX/F3DWRUS.cpp
-				$(CXX) $(CFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
+				$(CXX) $(CXXFLAGS) -D__LINUX__ -D__GX__ -c -o $@ $<
 
 wii64-glN64.elf:	$(OBJ) $(OBJ_INPUT) $(OBJ_GLN64_GX) $(OBJ_AUDIO) $(OBJ_RSPHLE) $(OBJ_PPC)
-		$(LD) $^ $(LDFLAGS) $(LIBPATHS) $(LIB) -Wl -o $@
+		$(LD) $^ $(LDFLAGS) $(LIBPATHS) $(LIB) -o $@
 		elf2dol wii64-glN64.elf wii64-glN64.dol
 
 install:

@@ -30,6 +30,7 @@
 #include <sys/dir.h>
 #include "fileBrowser.h"
 #include <sdcard/gcsd.h>
+#include <string.h>
 
 extern BOOL hasLoadedROM;
 extern int stop;
@@ -120,8 +121,9 @@ static void *removalCallback (void *arg)
 {
   while(devsleep > 0)
   {
-    if(!rThreadRun)
-      LWP_SuspendThread(removalThread);
+      if(!rThreadRun) {
+          LWP_SuspendThread(removalThread);
+	  }
       usleep(THREAD_SLEEP);
       devsleep -= THREAD_SLEEP;
   }
@@ -181,35 +183,66 @@ void InitRemovalThread()
 #endif
 }
 
+int fileBrowser_libfat_readDir(fileBrowser_file* file, fileBrowser_file** dir)
+{
 
-int fileBrowser_libfat_readDir(fileBrowser_file* file, fileBrowser_file** dir){
-  
-  pauseRemovalThread();
-	
-  DIR_ITER* dp = diropen( file->name );
+	pauseRemovalThread();
+
+	DIR* dp = opendir(file->name);
 	if(!dp) return FILE_BROWSER_ERROR;
-	struct stat fstat;
-	
+
+	//Stuff for new libogc, stat doesn't work at all
+	struct dirent *pent;
+	DIR* tmpdir;
+	FILE *f;
+	char NewFileName[PATH_MAX];
+
 	// Set everything up to read
-	char filename[MAXPATHLEN];
+	char filename[PATH_MAX];
 	int num_entries = 2, i = 0;
-	*dir = malloc( num_entries * sizeof(fileBrowser_file) );
+	*dir = malloc(num_entries * sizeof(fileBrowser_file));
 	// Read each entry of the directory
-	while( dirnext(dp, filename, &fstat) == 0 ){
+	while((pent = readdir(dp)) != NULL)
+	{
+		if(strcmp(pent->d_name, ".") == 0)
+			continue;
 		// Make sure we have room for this one
-		if(i == num_entries){
+		if(i == num_entries)
+		{
 			++num_entries;
 			*dir = realloc( *dir, num_entries * sizeof(fileBrowser_file) ); 
 		}
+		strncpy(filename, pent->d_name, sizeof(filename));
+		snprintf(NewFileName, sizeof(NewFileName), "%s/%s", file->name, pent->d_name);
+
+		size_t size = 0;
+		bool isDir = false;
+		tmpdir = opendir(NewFileName);
+		if(tmpdir)
+		{
+			isDir = true;
+			closedir(tmpdir);
+		}
+		else
+		{
+			f = fopen(NewFileName, "rb");
+			if (f)
+			{
+				fseek(f, 0, SEEK_END);
+				size = ftell(f);
+				fclose(f);
+			}
+		}
+		if (strcmp(pent->d_name, "..") == 0)
+			isDir = true;
 		sprintf((*dir)[i].name, "%s/%s", file->name, filename);
 		(*dir)[i].offset = 0;
-		(*dir)[i].size   = fstat.st_size;
-		(*dir)[i].attr   = (fstat.st_mode & S_IFDIR) ?
-		                     FILE_BROWSER_ATTR_DIR : 0;
+		(*dir)[i].size = size;
+		(*dir)[i].attr = isDir ? FILE_BROWSER_ATTR_DIR : 0;
 		++i;
 	}
-	
-	dirclose(dp);
+
+	closedir(dp);
 	continueRemovalThread();
 
 	return num_entries;

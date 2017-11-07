@@ -121,7 +121,6 @@ struct GLInfo
 	Mtx44	GXprojIdent;
 	Mtx44	GXprojTemp;
 	Mtx		GXmodelViewIdent;
-	BOOL	GXuseCombW;
 	BOOL	GXuseProjWnear;
 	BOOL	GXupdateMtx;
 	int		GXnumVtxMP;

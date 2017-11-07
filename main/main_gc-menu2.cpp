@@ -76,6 +76,7 @@ extern "C" {
 #include "../gc_memory/MEM2.h"
 #endif
 
+#include "usbthread.h"
 
 /* NECESSARY FUNCTIONS AND VARIABLES */
 
@@ -115,6 +116,7 @@ char menuActive;
        char creditsScrolling;
        char padNeedScan;
        char wpadNeedScan;
+	   char drcNeedScan;
        char shutdown = 0;
 	   char nativeSaveDevice;
 	   char saveStateDevice;
@@ -131,17 +133,17 @@ static struct {
 	char* value; // Not a string, but a char pointer
 	char  min, max;
 } OPTIONS[] =
-{ { "Audio", &audioEnabled, AUDIO_DISABLE, AUDIO_ENABLE },
-  { "FPS", &showFPSonScreen, FPS_HIDE, FPS_SHOW },
+{ { (char*)"Audio", &audioEnabled, AUDIO_DISABLE, AUDIO_ENABLE },
+  { (char*)"FPS", &showFPSonScreen, FPS_HIDE, FPS_SHOW },
 //  { "Debug", &printToScreen, DEBUG_HIDE, DEBUG_SHOW },
-  { "FBTex", &glN64_useFrameBufferTextures, GLN64_FBTEX_DISABLE, GLN64_FBTEX_ENABLE },
-  { "2xSaI", &glN64_use2xSaiTextures, GLN64_2XSAI_DISABLE, GLN64_2XSAI_ENABLE },
-  { "ScreenMode", &screenMode, SCREENMODE_4x3, SCREENMODE_16x9_PILLARBOX },
-  { "Core", ((char*)&dynacore)+3, DYNACORE_INTERPRETER, DYNACORE_PURE_INTERP },
-  { "NativeDevice", &nativeSaveDevice, NATIVESAVEDEVICE_SD, NATIVESAVEDEVICE_CARDB },
-  { "StatesDevice", &saveStateDevice, SAVESTATEDEVICE_SD, SAVESTATEDEVICE_USB },
-  { "AutoSave", &autoSave, AUTOSAVE_DISABLE, AUTOSAVE_ENABLE },
-  { "LimitVIs", &Timers.limitVIs, LIMITVIS_NONE, LIMITVIS_WAIT_FOR_FRAME },
+  { (char*)"FBTex", &glN64_useFrameBufferTextures, GLN64_FBTEX_DISABLE, GLN64_FBTEX_ENABLE },
+  { (char*)"2xSaI", &glN64_use2xSaiTextures, GLN64_2XSAI_DISABLE, GLN64_2XSAI_ENABLE },
+  { (char*)"ScreenMode", &screenMode, SCREENMODE_4x3, SCREENMODE_16x9_PILLARBOX },
+  { (char*)"Core", ((char*)&dynacore)+3, DYNACORE_INTERPRETER, DYNACORE_PURE_INTERP },
+  { (char*)"NativeDevice", &nativeSaveDevice, NATIVESAVEDEVICE_SD, NATIVESAVEDEVICE_CARDB },
+  { (char*)"StatesDevice", &saveStateDevice, SAVESTATEDEVICE_SD, SAVESTATEDEVICE_USB },
+  { (char*)"AutoSave", &autoSave, AUTOSAVE_DISABLE, AUTOSAVE_ENABLE },
+  { (char*)"LimitVIs", &Timers.limitVIs, LIMITVIS_NONE, LIMITVIS_WAIT_FOR_FRAME },
 /*  { "PadType1", &padType[0], PADTYPE_NONE, PADTYPE_WII },
   { "PadType2", &padType[1], PADTYPE_NONE, PADTYPE_WII },
   { "PadType3", &padType[2], PADTYPE_NONE, PADTYPE_WII },
@@ -150,17 +152,17 @@ static struct {
   { "PadAssign2", &padAssign[1], PADASSIGN_INPUT0, PADASSIGN_INPUT3 },
   { "PadAssign3", &padAssign[2], PADASSIGN_INPUT0, PADASSIGN_INPUT3 },
   { "PadAssign4", &padAssign[3], PADASSIGN_INPUT0, PADASSIGN_INPUT3 },*/
-  { "Pak1", &pakMode[0], PAKMODE_MEMPAK, PAKMODE_RUMBLEPAK },
-  { "Pak2", &pakMode[1], PAKMODE_MEMPAK, PAKMODE_RUMBLEPAK },
-  { "Pak3", &pakMode[2], PAKMODE_MEMPAK, PAKMODE_RUMBLEPAK },
-  { "Pak4", &pakMode[3], PAKMODE_MEMPAK, PAKMODE_RUMBLEPAK },
-  { "LoadButtonSlot", &loadButtonSlot, LOADBUTTON_SLOT0, LOADBUTTON_DEFAULT },
+  { (char*)"Pak1", &pakMode[0], PAKMODE_MEMPAK, PAKMODE_RUMBLEPAK },
+  { (char*)"Pak2", &pakMode[1], PAKMODE_MEMPAK, PAKMODE_RUMBLEPAK },
+  { (char*)"Pak3", &pakMode[2], PAKMODE_MEMPAK, PAKMODE_RUMBLEPAK },
+  { (char*)"Pak4", &pakMode[3], PAKMODE_MEMPAK, PAKMODE_RUMBLEPAK },
+  { (char*)"LoadButtonSlot", &loadButtonSlot, LOADBUTTON_SLOT0, LOADBUTTON_DEFAULT },
 };
 void handleConfigPair(char* kv);
 void readConfig(FILE* f);
 void writeConfig(FILE* f);
 
-extern "C" void gfx_set_fb(unsigned int* fb1, unsigned int* fb2);
+extern "C" void gfx_set_fb(u32* fb1, u32* fb2);
 void gfx_set_window(int x, int y, int width, int height);
 // -- End plugin data --
 
@@ -184,7 +186,7 @@ u16 readWPAD(void);
 int main(int argc, char* argv[]){
 	/* INITIALIZE */
 #ifdef HW_RVL
-  DI_Init();    // first
+	DI_Init();    // first
 #endif
 
 #ifdef DEBUGON
@@ -193,9 +195,28 @@ int main(int argc, char* argv[]){
 	_break();
 #endif
 
+	/* Lets kill wpad */
+	WPAD_Shutdown();
+
+	/* Reload to IOS58 for USB */
+	if(IOS_GetVersion() != 58)
+		IOS_ReloadIOS(58);
+
 	Initialise(); // Stock OGC initialization
 //	vmode = VIDEO_GetPreferredMode(NULL);
+
+	/* after init wpad wait a bit*/
+	sleep(2);
+
 	MenuContext *menu = new MenuContext(vmode);
+
+	if(argc > 3 && argv[1] != NULL && argv[2] != NULL && argv[3] != NULL)
+	{
+		menu->Autoboot = true;
+		strncpy(menu->AutobootPath, argv[1], sizeof(menu->AutobootPath));
+		strncpy(menu->AutobootROM, argv[2], sizeof(menu->AutobootROM));
+		strncpy(menu->AutobootDol, argv[3], sizeof(menu->AutobootDol));
+	}
 	VIDEO_SetPostRetraceCallback (ScanPADSandReset);
 #ifndef WII
 	DVD_Init();
@@ -250,7 +271,7 @@ int main(int argc, char* argv[]){
 	fileBrowser_file* configFile_file;
 	int (*configFile_init)(fileBrowser_file*) = fileBrowser_libfat_init;
 #ifdef HW_RVL
-	if(argv[0][0] == 'u') {  //assume USB
+	if(argc != 0 && argv != NULL && argv[0] != NULL && argv[0][0] == 'u') {  //assume USB
 		configFile_file = &saveDir_libfat_USB;
 		if(configFile_init(configFile_file)) {                //only if device initialized ok
 			FILE* f = fopen( "usb:/wii64/settings.cfg", "r" );  //attempt to open file
@@ -267,6 +288,11 @@ int main(int argc, char* argv[]){
 			f = fopen( "usb:/wii64/controlC.cfg", "r" );  //attempt to open file
 			if(f) {
 				load_configurations(f, &controller_Classic);			//write out Classic controller mappings
+				fclose(f);
+			}
+			f = fopen( "usb:/wii64/controlD.cfg", "r" );  //attempt to open file
+			if(f) {
+				load_configurations(f, &controller_DRC);		     	//write out DRC mappings
 				fclose(f);
 			}
 			f = fopen( "usb:/wii64/controlN.cfg", "r" );  //attempt to open file
@@ -303,6 +329,11 @@ int main(int argc, char* argv[]){
 				load_configurations(f, &controller_Classic);			//write out Classic controller mappings
 				fclose(f);
 			}
+			f = fopen( "sd:/wii64/controlD.cfg", "r" );  //attempt to open file
+			if(f) {
+				load_configurations(f, &controller_DRC);	    		//write out DRC mappings
+				fclose(f);
+			}
 			f = fopen( "sd:/wii64/controlN.cfg", "r" );  //attempt to open file
 			if(f) {
 				load_configurations(f, &controller_WiimoteNunchuk);	//write out WM+NC controller mappings
@@ -317,12 +348,21 @@ int main(int argc, char* argv[]){
 		}
 	}
 #ifdef HW_RVL
+
+	CreateUSBKeepAliveThread();
+
 	// Handle options passed in through arguments
-	int i;
-	for(i=1; i<argc; ++i){
-		handleConfigPair(argv[i]);
+	if(argc != 0 && argv != 0)
+	{
+		int i;
+		for(i=1; i<argc; ++i){
+			handleConfigPair(argv[i]);
+		}
 	}
 #endif
+	if(menu->Autoboot)
+		menu->setActiveFrame(2);
+
 	while (menu->isRunning()) {}
 
 	delete menu;
@@ -345,6 +385,20 @@ u16 readWPAD(void){
 	   	b |= (w & CLASSIC_CTRL_BUTTON_RIGHT) ? PAD_BUTTON_RIGHT : 0;
 	   	b |= (w & CLASSIC_CTRL_BUTTON_A) ? PAD_BUTTON_A : 0;
 	   	b |= (w & CLASSIC_CTRL_BUTTON_B) ? PAD_BUTTON_B : 0;
+	}
+
+	if(drcNeedScan){ WiiDRC_ScanPads(); drcNeedScan = 0; }
+
+	if(WiiDRC_Inited() && WiiDRC_Connected())
+	{
+		const WiiDRCData* drc = WiiDRC_Data();
+	   	u16 w = drc->button;
+	   	b |= (w & WIIDRC_BUTTON_UP)    ? PAD_BUTTON_UP    : 0;
+	   	b |= (w & WIIDRC_BUTTON_DOWN)  ? PAD_BUTTON_DOWN  : 0;
+	   	b |= (w & WIIDRC_BUTTON_LEFT)  ? PAD_BUTTON_LEFT  : 0;
+	   	b |= (w & WIIDRC_BUTTON_RIGHT) ? PAD_BUTTON_RIGHT : 0;
+	   	b |= (w & WIIDRC_BUTTON_A) ? PAD_BUTTON_A : 0;
+	   	b |= (w & WIIDRC_BUTTON_B) ? PAD_BUTTON_B : 0;
 	}
 
 	return b;
@@ -577,7 +631,7 @@ static void rsp_info_init(void){
 }
 
 void ScanPADSandReset(u32 dummy) {
-	padNeedScan = wpadNeedScan = 1;
+	drcNeedScan = padNeedScan = wpadNeedScan = 1;
 	if(!((*(u32*)0xCC003000)>>16))
 		stop = 1;
 }
@@ -692,7 +746,7 @@ static void Initialise (void){
 		:: "n" (16<<8 | 5) : "r3");
 }
 
-void video_mode_init(GXRModeObj *videomode,unsigned int *fb1, unsigned int *fb2)
+void video_mode_init(GXRModeObj *videomode,u32 *fb1, u32 *fb2)
 {
 	vmode = videomode;
 	rmode = videomode;

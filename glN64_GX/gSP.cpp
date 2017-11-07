@@ -124,32 +124,6 @@ void gSPCombineMatrices()
 		OGL_DrawTriangles();
 	OGL.GXupdateMtx = true;
 
-	if(gSP.matrix.combined[2][3] != 0)
-	{
-		OGL.GXcombW[2][2] = -GXprojZOffset - (GXprojZScale*gSP.matrix.combined[2][2]/gSP.matrix.combined[2][3]);
-		OGL.GXcombW[2][3] = GXprojZScale*(gSP.matrix.combined[3][2] - (gSP.matrix.combined[2][2]*gSP.matrix.combined[3][3]/gSP.matrix.combined[2][3]));
-//		OGL.GXcombW[2][3] = OGL.GXcombW[2][3]-0.25;
-		OGL.GXuseCombW = true;
-
-		//Transform for zPrime
-		if (gSP.matrix.combined[2][2] != 0)
-		{
-			OGL.GXzPrimeScale		= -gSP.matrix.combined[2][3]/gSP.matrix.combined[2][2];
-			OGL.GXzPrimeTranslate	= -(gSP.matrix.combined[3][2] - (gSP.matrix.combined[2][2]*gSP.matrix.combined[3][3]/gSP.matrix.combined[2][3]))*(gSP.matrix.combined[2][3]/gSP.matrix.combined[2][2]);
-//			OGL.GXzPrimeScale		= gSP.matrix.combined[2][3]/gSP.matrix.combined[2][2];
-//			OGL.GXzPrimeTranslate	= -(gSP.matrix.combined[3][2] + (gSP.matrix.combined[2][2]*gSP.matrix.combined[3][3]/gSP.matrix.combined[2][3]))*(gSP.matrix.combined[2][3]/gSP.matrix.combined[2][2]);
-		}
-		else
-		{
-			OGL.GXzPrimeScale = OGL.GXzPrimeTranslate = 0;
-# ifdef SHOW_DEBUG
-			sprintf(txtbuffer,"gSPCombineMtx: zPrime Error!");
-			DEBUG_print(txtbuffer,6+1); 
-# endif
-		}
-	}
-	else
-		OGL.GXuseCombW = false;
 #endif //__GX__
 }
 
@@ -470,33 +444,6 @@ void gSPForceMatrix( u32 mptr )
 	if (OGL.numTriangles)
 		OGL_DrawTriangles();
 	OGL.GXupdateMtx = true;
-
-	if(gSP.matrix.combined[2][3] != 0)
-	{
-		OGL.GXcombW[2][2] = -GXprojZOffset - (GXprojZScale*gSP.matrix.combined[2][2]/gSP.matrix.combined[2][3]);
-		OGL.GXcombW[2][3] = GXprojZScale*(gSP.matrix.combined[3][2] - (gSP.matrix.combined[2][2]*gSP.matrix.combined[3][3]/gSP.matrix.combined[2][3]));
-//		OGL.GXcombW[2][3] = OGL.GXcombW[2][3]-0.25;
-		OGL.GXuseCombW = true;
-
-		//Transform for zPrime
-		if (gSP.matrix.combined[2][2] != 0)
-		{
-			OGL.GXzPrimeScale		= -gSP.matrix.combined[2][3]/gSP.matrix.combined[2][2];
-			OGL.GXzPrimeTranslate	= -(gSP.matrix.combined[3][2] - (gSP.matrix.combined[2][2]*gSP.matrix.combined[3][3]/gSP.matrix.combined[2][3]))*(gSP.matrix.combined[2][3]/gSP.matrix.combined[2][2]);
-//			OGL.GXzPrimeScale		= gSP.matrix.combined[2][3]/gSP.matrix.combined[2][2];
-//			OGL.GXzPrimeTranslate	= -(gSP.matrix.combined[3][2] + (gSP.matrix.combined[2][2]*gSP.matrix.combined[3][3]/gSP.matrix.combined[2][3]))*(gSP.matrix.combined[2][3]/gSP.matrix.combined[2][2]);
-		}
-		else
-		{
-			OGL.GXzPrimeScale = OGL.GXzPrimeTranslate = 0;
-# ifdef SHOW_DEBUG
-			sprintf(txtbuffer,"gSPCombineMtx: zPrime Error!");
-			DEBUG_print(txtbuffer,6+1); 
-# endif
-		}
-	}
-	else
-		OGL.GXuseCombW = false;
 
 #endif //__GX__
 
@@ -1552,34 +1499,6 @@ void gSPInsertMatrix( u32 where, u32 num )
 	if (OGL.numTriangles)
 		OGL_DrawTriangles();
 	OGL.GXupdateMtx = true;
-
-	if(gSP.matrix.combined[2][3] != 0)
-	{
-		OGL.GXcombW[2][2] = -GXprojZOffset - (GXprojZScale*gSP.matrix.combined[2][2]/gSP.matrix.combined[2][3]);
-		OGL.GXcombW[2][3] = GXprojZScale*(gSP.matrix.combined[3][2] - (gSP.matrix.combined[2][2]*gSP.matrix.combined[3][3]/gSP.matrix.combined[2][3]));
-//		OGL.GXcombW[2][3] = OGL.GXcombW[2][3]-0.25;
-		OGL.GXuseCombW = true;
-
-		//Transform for zPrime
-		if (gSP.matrix.combined[2][2] != 0)
-		{
-			OGL.GXzPrimeScale		= -gSP.matrix.combined[2][3]/gSP.matrix.combined[2][2];
-			OGL.GXzPrimeTranslate	= -(gSP.matrix.combined[3][2] - (gSP.matrix.combined[2][2]*gSP.matrix.combined[3][3]/gSP.matrix.combined[2][3]))*(gSP.matrix.combined[2][3]/gSP.matrix.combined[2][2]);
-//			OGL.GXzPrimeScale		= gSP.matrix.combined[2][3]/gSP.matrix.combined[2][2];
-//			OGL.GXzPrimeTranslate	= -(gSP.matrix.combined[3][2] + (gSP.matrix.combined[2][2]*gSP.matrix.combined[3][3]/gSP.matrix.combined[2][3]))*(gSP.matrix.combined[2][3]/gSP.matrix.combined[2][2]);
-		}
-		else
-		{
-			OGL.GXzPrimeScale = OGL.GXzPrimeTranslate = 0;
-# ifdef SHOW_DEBUG
-			sprintf(txtbuffer,"gSPCombineMtx: zPrime Error!");
-			DEBUG_print(txtbuffer,6+1); 
-# endif
-		}
-	}
-	else
-		OGL.GXuseCombW = false;
-
 #endif //__GX__
 
 #ifdef DEBUG

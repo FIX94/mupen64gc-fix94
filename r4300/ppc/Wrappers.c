@@ -25,9 +25,11 @@
 #include "../Invalid_Code.h"
 #include "../ARAM-blocks.h"
 #include "../../gc_memory/memory.h"
+#include "../exception.h"
 #include "../interupt.h"
 #include "../r4300.h"
 #include "../Recomp-Cache.h"
+#include "../../main/ROM-Cache.h"
 #include "Recompile.h"
 #include "Wrappers.h"
 
@@ -35,6 +37,8 @@ extern int stop;
 extern unsigned long instructionCount;
 extern void (*interp_ops[64])(void);
 inline unsigned long update_invalid_addr(unsigned long addr);
+void RecompCache_Link(PowerPC_func* src_func, PowerPC_instr* src_instr, PowerPC_func* dst_func, PowerPC_instr* dst_instr);
+void invalidate_block(PowerPC_block* ppc_block);
 unsigned int dyna_check_cop1_unusable(unsigned int, int);
 unsigned int dyna_mem(unsigned int, unsigned int, memType, unsigned int, int);
 
@@ -112,7 +116,7 @@ void dynarec(unsigned int address){
 		
 		start_section(TRAMP_SECTION);
 		PowerPC_block* dst_block = blocks_get(address>>12);
-		unsigned long paddr = update_invalid_addr(address);
+		unsigned int paddr = update_invalid_addr(address);
 		/*
 		sprintf(txtbuffer, "trampolining to 0x%08x\n", address);
 		DEBUG_print(txtbuffer, DBG_USBGECKO);
@@ -165,7 +169,7 @@ void dynarec(unsigned int address){
 		
 		// Create a link if possible
 		if(link_branch && !func_was_freed(last_func))
-			RecompCache_Link(last_func, link_branch, func, code);
+			RecompCache_Link(last_func, link_branch, func, (PowerPC_instr*)code);
 		clear_freed_funcs();
 		
 		address = dyna_run(func, code);

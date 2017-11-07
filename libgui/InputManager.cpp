@@ -22,7 +22,7 @@
 #include "FocusManager.h"
 #include "CursorManager.h"
 #include "../gc_input/controller.h"
-
+#include <wiidrc/wiidrc.h>
 
 void ShutdownWii();
 
@@ -41,7 +41,7 @@ Input::Input()
 	WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR); 
 	WPAD_SetPowerButtonCallback((WPADShutdownCallback)ShutdownWii);
 	SYS_SetPowerCallback(ShutdownWii);
-
+	WiiDRC_Init();
 #endif
 //	VIDEO_SetPostRetraceCallback (PAD_ScanPads);
 }
@@ -59,6 +59,7 @@ void Input::refreshInput()
 	if(wpadNeedScan){ WPAD_ScanPads(); wpadNeedScan = 0; }
 	WPAD_ScanPads();
 	wiiPad = WPAD_Data(0);
+	if(drcNeedScan){ WiiDRC_ScanPads(); drcNeedScan = 0; }
 #endif
 }
 

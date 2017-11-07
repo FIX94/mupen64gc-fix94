@@ -31,7 +31,7 @@
 #include "Controller_#1.1.h"
 #endif
 
-extern char padNeedScan, wpadNeedScan;
+extern char padNeedScan, wpadNeedScan, drcNeedScan;
 extern u32 gc_connected;
 
 void control_info_init(void);
@@ -104,14 +104,15 @@ typedef struct _virtualControllers_t {
 	controller_config_t* config; // This is no longer needed...
 } virtualControllers_t;
 
-extern virtualControllers_t virtualControllers[4];
+extern virtualControllers_t virtualControllers[5];
 
 // List of all the defined controller_t's
 #if defined(WII) && !defined(NO_BT)
 
-#define num_controller_t 4
+#define num_controller_t 5
 extern controller_t controller_GC;
 extern controller_t controller_Classic;
+extern controller_t controller_DRC;
 extern controller_t controller_WiimoteNunchuk;
 extern controller_t controller_Wiimote;
 extern controller_t* controller_ts[num_controller_t];

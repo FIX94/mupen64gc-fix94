@@ -31,12 +31,12 @@ void GUI_print_color(char* string, GXColor color){
 	
 	// Next, expand tabs to spaces
 	int i;
-	for(i=0; i<num_lines; ++i) TEXT_expand( &TEXT_split_lines[i] );
+	for(i=0; i<num_lines; ++i) TEXT_expand( (char*)&TEXT_split_lines[i] );
 	
 	// Finally, fill out the next lines of text with the strings
 	for(i=0; i<num_lines; ++i){
 		strncpy( textptrs[text_next_line % GUI_TEXT_HEIGHT],
-		         &TEXT_split_lines[i], GUI_TEXT_WIDTH );
+		         (char*)&TEXT_split_lines[i], GUI_TEXT_WIDTH );
 		colors[text_next_line] = color;
 		text_next_line++;
 	}
@@ -59,7 +59,7 @@ void GUI_clear(void){
 	int i;
 	for(i=0; i<GUI_TEXT_HEIGHT; ++i){
 		text[i][0]  = 0;
-		textptrs[i] = &text[i];
+		textptrs[i] = (char*)&text[i];
 	}
 	
 	// Reset state
@@ -115,11 +115,11 @@ char** GUI_get_text(void){
 	if(isWrapped) GUI_update();
 
 	// Simply return our array
-	return &textptrs;
+	return (char**)&textptrs;
 }
 
 GXColor* GUI_get_colors(void){
 	// Simply return our array
-	return &colors;
+	return (GXColor*)&colors;
 }
 

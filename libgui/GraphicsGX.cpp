@@ -26,7 +26,7 @@
 
 
 extern "C" unsigned int usleep(unsigned int us);
-void video_mode_init(GXRModeObj *rmode, unsigned int *fb1, unsigned int *fb2);
+void video_mode_init(GXRModeObj *rmode, u32 *fb1, u32 *fb2);
 
 namespace menu {
 
@@ -56,7 +56,7 @@ Graphics::Graphics(GXRModeObj *rmode)
 	}
 #endif
 	if (memcmp( &vmode_phys, &TVPal528IntDf, sizeof(GXRModeObj)) == 0)
-		memcpy( &vmode_phys, &TVPal574IntDfScale, sizeof(GXRModeObj));
+		memcpy( &vmode_phys, &TVPal576IntDfScale, sizeof(GXRModeObj));
 
 	//vmode->efbHeight = viewportHeight; // Note: all possible modes have efbHeight of 480
 
@@ -74,7 +74,7 @@ Graphics::Graphics(GXRModeObj *rmode)
 	which_fb ^= 1;
 
 	//Pass vmode, xfb[0] and xfb[1] back to main program
-	video_mode_init(vmode, (unsigned int*)xfb[0], (unsigned int*)xfb[1]);
+	video_mode_init(vmode, (u32*)xfb[0], (u32*)xfb[1]);
 
 	//Perform GX init stuff here?
 	//GX_init here or in main?
@@ -108,11 +108,11 @@ void Graphics::init()
 	GX_SetCopyFilter(vmode->aa,vmode->sample_pattern,GX_TRUE,vmode->vfilter);
 	GX_SetFieldMode(vmode->field_rendering,((vmode->viHeight==2*vmode->xfbHeight)?GX_ENABLE:GX_DISABLE));
  
-	if (vmode->aa)
+	if (vmode->aa) {
         GX_SetPixelFmt(GX_PF_RGB565_Z16, GX_ZC_LINEAR);
-    else
+    } else {
         GX_SetPixelFmt(GX_PF_RGB8_Z24, GX_ZC_LINEAR);
-
+	}
 	GX_SetCullMode(GX_CULL_NONE);
 	GX_SetDispCopyGamma(GX_GM_1_0);
 

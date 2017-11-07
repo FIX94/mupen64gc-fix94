@@ -35,13 +35,13 @@
 #endif // __GX__
 
 #ifdef __LINUX__
+#include <stdlib.h>
 # ifndef min
 #  define min(a,b) ((a) < (b) ? (a) : (b))
 # endif
 # ifndef max
 #  define max(a,b) ((a) > (b) ? (a) : (b))
 # endif
-#include <stdlib.h>
 #endif
 
 gDPInfo gDP;

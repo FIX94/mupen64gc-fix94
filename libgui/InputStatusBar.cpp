@@ -26,6 +26,7 @@
 #include "FocusManager.h"
 #include <math.h>
 #include <gccore.h>
+#include <wiidrc/wiidrc.h>
 #include "../main/wii64config.h"
 
 extern "C" {
@@ -151,6 +152,7 @@ void InputStatusBar::drawComponent(Graphics& gfx)
 			s32 err;
 			err = WPAD_Probe((int)padAssign[i], &type);
 			controller_Classic.available[(int)padAssign[i]] = (err == WPAD_ERR_NONE && type == WPAD_EXP_CLASSIC) ? 1 : 0;
+			controller_DRC.available[(int)padAssign[i]] = (i == 0 && WiiDRC_Inited() && WiiDRC_Connected()) ? 1 : 0;
 			controller_WiimoteNunchuk.available[(int)padAssign[i]] = (err == WPAD_ERR_NONE && type == WPAD_EXP_NUNCHUK) ? 1 : 0;
 			controller_Wiimote.available[(int)padAssign[i]] = (err == WPAD_ERR_NONE && type == WPAD_EXP_NONE) ? 1 : 0;
 			if (controller_Classic.available[(int)padAssign[i]])
@@ -162,6 +164,16 @@ void InputStatusBar::drawComponent(Graphics& gfx)
 				IplFont::getInstance().drawInit(controllerColors[i]);
 				statusIcon = Resources::getInstance().getImage(Resources::IMAGE_CONTROLLER_CLASSIC);
 //				sprintf (statusText, "Pad%d: CC%d", i+1, padAssign[i]+1);
+			}
+			else if (controller_DRC.available[(int)padAssign[i]])
+			{
+				assign_controller(i, &controller_DRC, (int)padAssign[i]);
+//				gfx.setColor(activeColor);
+//				IplFont::getInstance().drawInit(activeColor);
+				gfx.setColor(controllerColors[i]);
+				IplFont::getInstance().drawInit(controllerColors[i]);
+				statusIcon = Resources::getInstance().getImage(Resources::IMAGE_CONTROLLER_CLASSIC);
+//				sprintf (statusText, "Pad%d: DRC%d", i+1, padAssign[i]+1);
 			}
 			else if (controller_WiimoteNunchuk.available[(int)padAssign[i]])
 			{

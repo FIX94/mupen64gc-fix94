@@ -190,6 +190,7 @@ void Func_ExitToLoader()
 {
 	if(menu::MessageBox::getInstance().askMessage("Are you sure you want to exit to loader?"))
 		shutdown = 2;
+
 //#ifdef WII
 //	DI_Close();
 //#endif
@@ -324,6 +325,8 @@ void Func_PlayGame()
 void Func_SetPlayGame()
 {
 	FRAME_BUTTONS[5].buttonString = FRAME_STRINGS[5];
+	if(pMenuContext->Autoboot)
+		Func_PlayGame();
 }
 
 void Func_SetResumeGame()

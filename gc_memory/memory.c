@@ -52,7 +52,6 @@
 #include "flashram.h"
 #include "../main/plugin.h"
 #include "../main/guifuncs.h"
-
 #include "../gui/DEBUG.h"
 #include <assert.h>
 
@@ -71,10 +70,10 @@ DPS_register dps_register;
 // TODO: We only need 8MB when it's used, it'll save
 //         memory when we can alloc only 4MB
 #ifdef USE_EXPANSION
-	unsigned long rdram[0x800000/4];
+	unsigned int rdram[0x800000/4];
 	#define MEMMASK 0x7FFFFF
 #else
-	unsigned long rdram[0x800000/4/2];
+	unsigned int rdram[0x800000/4/2];
 	#define MEMMASK 0x3FFFFF
 #endif
 unsigned char *rdramb = (unsigned char *)(rdram);
@@ -240,19 +239,19 @@ int init_memory()
    //init RDRAM
 #ifdef USE_EXPANSION
    for (i=0; i<(0x800000/4); i++) rdram[i]=0;
-   for (i=0; i<0x80; i++)	//TODO: set at runtime based on 4MB/8MB DRAM size
+   for (i=0; i<0x80; i++)
 #else
    for (i=0; i<(0x800000/4/2); i++) rdram[i]=0;
-   for (i=0; i<0x40/*0x80*/; i++)	//TODO: set at runtime based on 4MB/8MB DRAM size
+   for (i=0; i<0x40; i++)
 #endif
      {
 	rwmem[(0x8000+i)] = rw_rdram;
 	rwmem[(0xa000+i)] = rw_rdram;
      }
 #ifdef USE_EXPANSION
-   for (i=0x80; i<0x3F0; i++)	//TODO: set at runtime based on 4MB/8MB DRAM size
-#else   
-   for (i=0x40/*0x80*/; i<0x3F0; i++)	//TODO: set at runtime based on 4MB/8MB DRAM size 
+   for (i=0x80; i<0x3F0; i++)
+#else
+   for (i=0x40; i<0x3F0; i++)
 #endif
      {
 	rwmem[0x8000+i] = rw_nothing;
@@ -1037,19 +1036,6 @@ void write_nomemd()
    if (address == 0x00000000) return;
    write_dword_in_memory();
 }
-/*
-	//taken from 1964 source code.
-	//This as well as the 4Mb hack need to be done in a while loop which runs before bootup
-	//i.e. while (N64_ProgramCounter != rom[8]) executeN64(); patch();
-		
-	// Azimer - DK64 Hack to break out of infinite loop £
-	// I believe this memory location is some sort of copyright protection which £
-	// is written to using the RSP on bootup. The only issue I see is if it £
-	// affects any other roms?
-	 	 
-	if(strncmp(ROM_HEADER->nom, "DONKEY KONG 64", 14) == 0)
-		rdram[0x2FE1C0/4] = 0xAD170014;
-*/
 
 void read_rdram()
 {

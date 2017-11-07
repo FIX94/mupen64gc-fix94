@@ -34,6 +34,7 @@
 #include <ctype.h>
 #include "../gui/GUI.h"
 #include "rom.h"
+#include "timers.h"
 #include "ROM-Cache.h"
 #include "../gc_memory/memory.h"
 #include "../fileBrowser/fileBrowser.h"
@@ -47,7 +48,7 @@ int ROM_byte_swap;
 rom_header* ROM_HEADER = NULL;
 rom_settings ROM_SETTINGS;
 
-int init_byte_swap(u32 magicWord){
+int init_byte_swap(unsigned int magicWord){
 
 	switch(magicWord){
 	case 0x37804012:					//37804012 aka byteswapped
@@ -116,7 +117,7 @@ bool isEEPROM16k()
 {
   int i = 0;
   unsigned int curCRC[2];
-  ROMCache_read((unsigned int*)&curCRC[0], 0x10, sizeof(unsigned int)*2);
+  ROMCache_read((u8*)&curCRC[0], 0x10, sizeof(unsigned int)*2);
 
   for (i = 0; i < TOTAL_NUM_16KBIT; i++)
   {
@@ -172,7 +173,7 @@ int rom_read(fileBrowser_file* file){
      return ret;
    }
    if(!ROM_HEADER) ROM_HEADER = malloc(sizeof(rom_header));
-   ROMCache_read((u32*)ROM_HEADER, 0, sizeof(rom_header));
+   ROMCache_read((u8*)ROM_HEADER, 0, sizeof(rom_header));
 
    // Swap country code back since I know the emulator relies on this being little endian.
   char temp = ((char*)&ROM_HEADER->Country_code)[0];

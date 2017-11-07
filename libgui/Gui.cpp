@@ -28,6 +28,8 @@
 #include "GuiResources.h"
 #include "../main/wii64config.h"
 
+#include "../main/usbthread.h"
+
 extern "C" {
 #include "../gc_input/controller.h"
 #ifdef WII
@@ -107,21 +109,23 @@ void Gui::draw()
 		gfx->setColor((GXColor){0, 0, 0, fade});
 		if(screenMode)	gfx->fillRect(-104, 0, 848, 480);
 		else			gfx->fillRect(0, 0, 640, 480);
-		
+
+		KillUSBKeepAliveThread();
+
 		if(fade == 255)
 		{
 			VIDEO_SetBlack(true);
 			VIDEO_Flush();
 		 	VIDEO_WaitVSync();
-			if(shutdown==1)	//Power off System
+			if(shutdown == 1)	//Power off System
 				SYS_ResetSystem(SYS_POWEROFF, 0, 0);
-			else			//Return to Loader
+			else //Return to Loader/WiiFlow
 			{
-#ifdef WII
-        if(dvd_hard_init) {
-				  DI_Close();
-			  }
-#endif
+				#ifdef WII
+					if(dvd_hard_init) {
+						DI_Close();
+					}
+				#endif
 				void (*rld)() = (void (*)()) 0x80001800;
 				rld();
 			}

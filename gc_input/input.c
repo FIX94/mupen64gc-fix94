@@ -38,11 +38,11 @@
 static CONTROL_INFO control_info;
 static BOOL lastData[4];
 
-virtualControllers_t virtualControllers[4];
+virtualControllers_t virtualControllers[5];
 
 controller_t* controller_ts[num_controller_t] =
 #if defined(WII) && !defined(NO_BT)
-	{ &controller_GC, &controller_Classic,
+	{ &controller_GC, &controller_Classic, &controller_DRC,
 	  &controller_WiimoteNunchuk,
 	  &controller_Wiimote,
 	 };

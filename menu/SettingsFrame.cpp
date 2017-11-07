@@ -496,6 +496,31 @@ void SettingsFrame::drawChildren(menu::Graphics &gfx)
 					}
 				}
 			}
+			else if (i == 0 && WiiDRC_Inited() && WiiDRC_Connected() && (WiiDRC_ButtonsHeld() ^ previousButtonsDRC[i]))
+			{
+				u32 currentButtonsDownDRC = (WiiDRC_ButtonsHeld() ^ previousButtonsDRC[i]) & WiiDRC_ButtonsHeld();
+				previousButtonsDRC[i] = WiiDRC_ButtonsHeld();
+				if (currentButtonsDownDRC & WIIDRC_BUTTON_R)
+				{
+					//move to next tab
+					if(activeSubmenu < SUBMENU_SAVES) 
+					{
+						activateSubmenu(activeSubmenu+1);
+						menu::Focus::getInstance().clearPrimaryFocus();
+					}
+					break;
+				}
+				else if (currentButtonsDownDRC & WIIDRC_BUTTON_L)
+				{
+					//move to the previous tab
+					if(activeSubmenu > SUBMENU_GENERAL) 
+					{
+						activateSubmenu(activeSubmenu-1);
+						menu::Focus::getInstance().clearPrimaryFocus();
+					}
+					break;
+				}
+			}
 #endif //HW_RVL
 		}
 
@@ -802,6 +827,12 @@ void Func_SaveButtonsSD()
 			fclose(f);
 			num_written++;
 		}
+		f = fopen( "sd:/wii64/controlD.cfg", "wb" );  //attempt to open file
+		if(f) {
+			save_configurations(f, &controller_DRC);		    	//write out DRC mappings
+			fclose(f);
+			num_written++;
+		}
 		f = fopen( "sd:/wii64/controlN.cfg", "wb" );  //attempt to open file
 		if(f) {
 			save_configurations(f, &controller_WiimoteNunchuk);	//write out WM+NC controller mappings
@@ -839,6 +870,12 @@ void Func_SaveButtonsUSB()
 		f = fopen( "usb:/wii64/controlC.cfg", "wb" );  //attempt to open file
 		if(f) {
 			save_configurations(f, &controller_Classic);			//write out Classic controller mappings
+			fclose(f);
+			num_written++;
+		}
+		f = fopen( "usb:/wii64/controlD.cfg", "wb" );  //attempt to open file
+		if(f) {
+			save_configurations(f, &controller_DRC);		     	//write out DRC mappings
 			fclose(f);
 			num_written++;
 		}

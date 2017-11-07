@@ -18,6 +18,7 @@
  *
 **/
 
+#define _GNU_SOURCE
 #include <math.h>
 #include <cstdlib>
 #include "MenuContext.h"
@@ -243,6 +244,33 @@ void FileBrowserFrame::drawChildren(menu::Graphics &gfx)
 					}
 				}
 			}
+			else if (i == 0 && WiiDRC_Inited() && WiiDRC_Connected() && (WiiDRC_ButtonsHeld() ^ previousButtonsDRC[i]))
+			{
+				u32 currentButtonsDownDRC = (WiiDRC_ButtonsHeld() ^ previousButtonsDRC[i]) & WiiDRC_ButtonsHeld();
+				previousButtonsDRC[i] = WiiDRC_ButtonsHeld();
+				if (currentButtonsDownDRC & WIIDRC_BUTTON_R)
+				{
+					//move to next set & return
+					if(current_page+1 < max_page) 
+					{
+						current_page +=1;
+						fileBrowserFrame_FillPage();
+						menu::Focus::getInstance().clearPrimaryFocus();
+					}
+					break;
+				}
+				else if (currentButtonsDownDRC & WIIDRC_BUTTON_L)
+				{
+					//move to the previous set & return
+					if(current_page > 0) 
+					{
+						current_page -= 1;
+						fileBrowserFrame_FillPage();
+						menu::Focus::getInstance().clearPrimaryFocus();
+					}
+					break;
+				}
+			}
 #endif //HW_RVL
 		}
 
@@ -321,7 +349,7 @@ static int dir_comparator(const void* _x, const void* _y){
 	if(xIsDir != yIsDir)
 		return yIsDir - xIsDir;
 	else
-		return stricmp(x->name, y->name);
+		return strcasecmp(x->name, y->name);
 }
 
 void fileBrowserFrame_OpenDirectory(fileBrowser_file* dir)
@@ -439,7 +467,8 @@ void fileBrowserFrame_LoadFile(int i)
 		// We must select this file
 		int ret = loadROM( &dir_entries[i] );
 		
-		if(!ret){	// If the read succeeded.
+		if(!ret && !pMenuContext->Autoboot) // If the read succeeded.
+		{
 			strcpy(feedback_string, "Loaded ");
 			strncat(feedback_string, filenameFromAbsPath(dir_entries[i].name), 36-7);
 
@@ -454,31 +483,31 @@ void fileBrowserFrame_LoadFile(int i)
 			if(ROM_HEADER->Manufacturer_ID == 'N') sprintf(buffer,"Manufacturer: Nintendo\n");
 			else sprintf(buffer,"Manufacturer: %x\n", (unsigned int)(ROM_HEADER->Manufacturer_ID));
 			strcat(RomInfo,buffer);
-		    countrycodestring(ROM_HEADER->Country_code&0xFF, buffer2);
+			countrycodestring(ROM_HEADER->Country_code&0xFF, buffer2);
 			sprintf(buffer,"Country: %s\n",buffer2);
 			strcat(RomInfo,buffer);
 			switch (autoSaveLoaded)
 			{
-			case NATIVESAVEDEVICE_NONE:
-				break;
-			case NATIVESAVEDEVICE_SD:
-				strcat(RomInfo,"\nFound & loaded save from SD card\n");
-				break;
-			case NATIVESAVEDEVICE_USB:
-				strcat(RomInfo,"\nFound & loaded save from USB device\n");
-				break;
-			case NATIVESAVEDEVICE_CARDA:
-				strcat(RomInfo,"\nFound & loaded save from memcard in slot A\n");
-				break;
-			case NATIVESAVEDEVICE_CARDB:
-				strcat(RomInfo,"\nFound & loaded save from memcard in slot B\n");
-				break;
+				case NATIVESAVEDEVICE_NONE:
+					break;
+				case NATIVESAVEDEVICE_SD:
+					strcat(RomInfo,"\nFound & loaded save from SD card\n");
+					break;
+				case NATIVESAVEDEVICE_USB:
+					strcat(RomInfo,"\nFound & loaded save from USB device\n");
+					break;
+				case NATIVESAVEDEVICE_CARDA:
+					strcat(RomInfo,"\nFound & loaded save from memcard in slot A\n");
+					break;
+				case NATIVESAVEDEVICE_CARDB:
+					strcat(RomInfo,"\nFound & loaded save from memcard in slot B\n");
+					break;
 			}
 			autoSaveLoaded = NATIVESAVEDEVICE_NONE;
 
 			menu::MessageBox::getInstance().setMessage(RomInfo);
 		}
-		else		// If not.
+		else if(ret)	// If not.
 		{
   		switch(ret) {
     		case ROM_CACHE_ERROR_READ:
@@ -512,4 +541,13 @@ void fileBrowserFrame_LoadFile(int i)
 		pMenuContext->setActiveFrame(MenuContext::FRAME_MAIN);
 		if(hasLoadedROM) Func_SetPlayGame();
 	}
+}
+
+void fileBrowserFrame_AutoBootFile()
+{
+	int i;
+	for(i = 0; i < num_entries - 1; i++)
+		if(strcasestr(dir_entries[i].name, pMenuContext->AutobootROM) != NULL)
+			break;
+	fileBrowserFrame_LoadFile(i);
 }

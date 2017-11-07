@@ -61,7 +61,7 @@ extern unsigned int usleep(unsigned int us);
 
 void new_frame(void) {
 	DWORD CurrentFPSTime;
-	static DWORD LastFPSTime;
+	//static DWORD LastFPSTime;
 	static DWORD CounterTime;
 	static int Fps_Counter=0;
 	
@@ -81,7 +81,7 @@ void new_frame(void) {
 		Fps_Counter = 0;
 	}
 
-	LastFPSTime = CurrentFPSTime;
+	//LastFPSTime = CurrentFPSTime;
 	Timers.lastFrameTime = CurrentFPSTime;
 }
 

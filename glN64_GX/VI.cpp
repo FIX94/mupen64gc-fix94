@@ -75,6 +75,10 @@ void VI_UpdateSize()
 
 	if (VI.width == 0.0f) VI.width = (unsigned long)320.0f;
 	if (VI.height == 0.0f) VI.height = (unsigned long)240.0f;
+
+	// Interlace detection
+	if ((*REG.VI_STATUS>>6)&1)
+		VI.height*=2;
 }
 
 void VI_UpdateScreen()
@@ -132,7 +136,6 @@ void VI_UpdateScreen()
 		GX_SetCopyClear ((GXColor){0,0,0,255}, 0xFFFFFF);
 		GX_CopyDisp (VI.xfb[VI.which_fb]+GX_xfb_offset, GX_FALSE);
 		GX_DrawDone(); //Wait until EFB->XFB copy is complete
-		VI.enableLoadIcon = true;
 		VI.EFBcleared = false;
 		VI.copy_fb = true;
 	}
@@ -161,7 +164,6 @@ void VI_UpdateScreen()
 			GX_CopyDisp (VI.xfb[VI.which_fb]+GX_xfb_offset, GX_FALSE);
 			GX_DrawDone(); //Wait until EFB->XFB copy is complete
 			VI.updateOSD = false;
-			VI.enableLoadIcon = true;
 			VI.copy_fb = true;
 
 			//Restore current EFB
@@ -187,7 +189,6 @@ void VI_UpdateScreen()
 			GX_CopyDisp (VI.xfb[VI.which_fb]+GX_xfb_offset, GX_FALSE);
 			GX_DrawDone(); //Wait until EFB->XFB copy is complete
 			VI.updateOSD = false;
-			VI.enableLoadIcon = true;
 			VI.EFBcleared = false;
 			VI.copy_fb = true;
 			gSP.changed &= ~CHANGED_COLORBUFFER;
@@ -209,7 +210,6 @@ void VI_GX_init() {
 	new_fb = false;
 	which_fb = 1;*/
 	VI.updateOSD = true;
-	VI.enableLoadIcon = false;
 	VI.EFBcleared = true;
 	VI.copy_fb = false;
 	VI.which_fb = 1;
@@ -252,157 +252,6 @@ void VI_GX_showFPS(){
 	//reset swap table from GUI/DEBUG
 //	GX_SetTevSwapModeTable(GX_TEV_SWAP0, GX_CH_RED, GX_CH_GREEN, GX_CH_BLUE, GX_CH_ALPHA);
 	GX_SetTevSwapMode(GX_TEVSTAGE0, GX_TEV_SWAP0, GX_TEV_SWAP0);
-}
-
-void VI_GX_showLoadProg(float percent)
-{
-	if (!VI.enableLoadIcon)
-		return;
-
-#ifndef MENU_V2
-	GXColor GXcol1 = {0,128,255,255};
-	GXColor GXcol2 = {0,64,128,255};
-	float xbar[3] = {425,425,550};
-	float ybar[2] = {75,90};
-	Mtx44 GXprojection2D;
-	Mtx GXmodelView2D;
-
-	xbar[1] = xbar[0] + (xbar[2]-xbar[0])*percent;
-
-	guMtxIdentity(GXmodelView2D);
-	GX_LoadPosMtxImm(GXmodelView2D,GX_PNMTX2);
-	guOrtho(GXprojection2D, 0, 480, 0, 640, 0, 1);
-	GX_LoadProjectionMtx(GXprojection2D, GX_ORTHOGRAPHIC); //load current 2D projection matrix
-	//draw rectangle from ulx,uly to lrx,lry
-	GX_ClearVtxDesc();
-	GX_SetVtxDesc(GX_VA_PTNMTXIDX, GX_PNMTX2);
-	GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
-	GX_SetVtxDesc(GX_VA_CLR0, GX_DIRECT);
-	//set vertex attribute formats here
-	GX_SetVtxAttrFmt(GX_VTXFMT1, GX_VA_POS, GX_POS_XY, GX_F32, 0);
-	GX_SetVtxAttrFmt(GX_VTXFMT1, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
-
-	//disable textures
-	GX_SetNumChans (1);
-	GX_SetNumTexGens (0);
-	GX_SetTevOrder (GX_TEVSTAGE0, GX_TEXCOORDNULL, GX_TEXMAP_NULL, GX_COLOR0A0);
-	GX_SetTevOp (GX_TEVSTAGE0, GX_PASSCLR);
-	//set blend mode
-	GX_SetBlendMode(GX_BM_NONE, GX_BL_ONE, GX_BL_ZERO, GX_LO_CLEAR); //Fix src alpha
-	GX_SetColorUpdate(GX_ENABLE);
-	GX_SetAlphaUpdate(GX_ENABLE);
-	GX_SetDstAlpha(GX_DISABLE, 0xFF);
-	GX_SetZMode(GX_DISABLE,GX_ALWAYS,GX_FALSE);
-	GX_SetZTexture(GX_ZT_DISABLE,GX_TF_Z16,0);	//GX_ZT_DISABLE or GX_ZT_REPLACE; set in gDP.cpp
-	GX_SetZCompLoc(GX_TRUE);	// Do Z-compare before texturing.
-	//set cull mode
-	GX_SetCullMode (GX_CULL_NONE);
-
-	GX_Begin(GX_QUADS, GX_VTXFMT1, 8);
-	// background rectangle
-	GX_Position2f32(xbar[0], ybar[0]);
-	GX_Color4u8(GXcol2.r, GXcol2.g, GXcol2.b, GXcol2.a);
-	GX_Position2f32(xbar[2], ybar[0]);
-	GX_Color4u8(GXcol2.r, GXcol2.g, GXcol2.b, GXcol2.a);
-	GX_Position2f32(xbar[2], ybar[1]);
-	GX_Color4u8(GXcol2.r, GXcol2.g, GXcol2.b, GXcol2.a);
-	GX_Position2f32(xbar[0], ybar[1]);
-	GX_Color4u8(GXcol2.r, GXcol2.g, GXcol2.b, GXcol2.a);
-	// progress rectangle
-	GX_Position2f32(xbar[0], ybar[0]);
-	GX_Color4u8(GXcol1.r, GXcol1.g, GXcol1.b, GXcol1.a);
-	GX_Position2f32(xbar[1], ybar[0]);
-	GX_Color4u8(GXcol1.r, GXcol1.g, GXcol1.b, GXcol1.a);
-	GX_Position2f32(xbar[1], ybar[1]);
-	GX_Color4u8(GXcol1.r, GXcol1.g, GXcol1.b, GXcol1.a);
-	GX_Position2f32(xbar[0], ybar[1]);
-	GX_Color4u8(GXcol1.r, GXcol1.g, GXcol1.b, GXcol1.a);
-	GX_End();
-#else //!MENU_V2
-	float x = 530;
-	float y = 30;
-	float width = 80;
-	float height = 56;
-
-	Mtx44 GXprojection2D;
-	Mtx GXmodelView2D;
-
-	GXTexObj texObj;
-//	GX_InitTexObj(&texObj, LoadingTexture, width, height, GX_TF_RGBA8, GX_CLAMP, GX_CLAMP, GX_FALSE);
-	GX_InitTexObj(&texObj, LoadingTexture, width, height, GX_TF_RGB5A3, GX_CLAMP, GX_CLAMP, GX_FALSE);
-	GX_LoadTexObj(&texObj, GX_TEXMAP0);
-
-	guMtxIdentity(GXmodelView2D);
-	GX_LoadPosMtxImm(GXmodelView2D,GX_PNMTX2);
-	guOrtho(GXprojection2D, 0, 480, 0, 640, 0, 1);
-	GX_LoadProjectionMtx(GXprojection2D, GX_ORTHOGRAPHIC); //load current 2D projection matrix
-//	GX_SetViewport((f32) 0,(f32) 0,(f32) 640,(f32) 480, 0.0f, 1.0f);
-	GX_SetViewport((f32) OGL.GXorigX,(f32) OGL.GXorigY,(f32) OGL.GXwidth,(f32) OGL.GXheight, 0.0f, 1.0f);
-	GX_SetScissor((u32) 0,(u32) 0,(u32) 640,(u32) 480);	//Set to the same size as the viewport.
-
-	GX_ClearVtxDesc();
-	GX_SetVtxDesc(GX_VA_PTNMTXIDX, GX_PNMTX2);
-	GX_SetVtxDesc(GX_VA_POS, GX_DIRECT);
-	GX_SetVtxDesc(GX_VA_TEX0, GX_DIRECT);
-	//set vertex attribute formats here
-	GX_SetVtxAttrFmt(GX_VTXFMT1, GX_VA_POS, GX_POS_XY, GX_F32, 0);
-	GX_SetVtxAttrFmt(GX_VTXFMT1, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
-
-	//disable textures
-	GX_SetNumChans (0);
-	GX_SetNumTexGens (1);
-	GX_SetTevOrder (GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLORNULL);
-	GX_SetTevOp (GX_TEVSTAGE0, GX_REPLACE);
-	//set blend mode
-	GX_SetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_CLEAR); //Fix src alpha
-	GX_SetColorUpdate(GX_ENABLE);
-	GX_SetAlphaUpdate(GX_ENABLE);
-	GX_SetDstAlpha(GX_DISABLE, 0xFF);
-	GX_SetZMode(GX_DISABLE,GX_ALWAYS,GX_FALSE);
-	GX_SetZTexture(GX_ZT_DISABLE,GX_TF_Z16,0);	//GX_ZT_DISABLE or GX_ZT_REPLACE; set in gDP.cpp
-	GX_SetZCompLoc(GX_TRUE);	// Do Z-compare before texturing.
-	//set cull mode
-	GX_SetCullMode (GX_CULL_NONE);
-
-	GX_Begin(GX_QUADS, GX_VTXFMT1, 4);
-		GX_Position2f32(x, y);
-		GX_TexCoord2f32(0,0);
-		GX_Position2f32(x+width, y);
-		GX_TexCoord2f32(1,0);
-		GX_Position2f32(x+width, y+height);
-		GX_TexCoord2f32(1,1);
-		GX_Position2f32(x, y+height);
-		GX_TexCoord2f32(0,1);
-	GX_End();
-
-#endif //MENU_V2
-
-	if (OGL.frameBufferTextures)
-	{
-		//Draw DEBUG to screen
-		VI_GX_cleanUp();
-		VI_GX_showFPS();
-		VI_GX_showDEBUG();
-		GX_SetCopyClear ((GXColor){0,0,0,255}, 0xFFFFFF);
-		//Copy EFB->XFB
-		if (VI.copy_fb)	GX_CopyDisp (VI.xfb[VI.which_fb]+GX_xfb_offset, GX_FALSE);
-		else			GX_CopyDisp (VI.xfb[VI.which_fb^1]+GX_xfb_offset, GX_FALSE);
-		GX_DrawDone(); //Wait until EFB->XFB copy is complete
-		VI.updateOSD = false;
-		VI.enableLoadIcon = true;
-		VI.copy_fb = true;
-
-		//Restore current EFB
-		FrameBuffer_RestoreBuffer( gDP.colorImage.address, gDP.colorImage.size, gDP.colorImage.width );
-	}
-	else
-	{
-		if (VI.copy_fb)	GX_CopyDisp (VI.xfb[VI.which_fb]+GX_xfb_offset, GX_FALSE);
-		else			GX_CopyDisp (VI.xfb[VI.which_fb^1]+GX_xfb_offset, GX_FALSE);
-		GX_Flush();
-	}
-//    GX_DrawDone();
-//	VI.copy_fb = true;
 }
 
 void VI_GX_updateDEBUG()

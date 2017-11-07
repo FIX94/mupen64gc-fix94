@@ -25,24 +25,25 @@
 
 #include <string.h>
 #include <math.h>
-#include <wiiuse/wpad.h>
 #include "controller.h"
+#include <wiidrc/wiidrc.h>
 
-#ifndef PI
-#define PI 3.14159f
-#endif
+#define DRC_DEADZONE 10
+#define _DRC_BUILD_TMPSTICK(inval) \
+	tmp_stick16 = (inval*14)>>3; \
+	if(tmp_stick16 > DRC_DEADZONE) tmp_stick16 = (tmp_stick16-DRC_DEADZONE)*1.08f; \
+	else if(tmp_stick16 < -DRC_DEADZONE) tmp_stick16 = (tmp_stick16+DRC_DEADZONE)*1.08f; \
+	else tmp_stick16 = 0; \
+	if(tmp_stick16 > 0x7F) tmp_stick8 = 0x7F; \
+	else if(tmp_stick16 < -0x80) tmp_stick8 = -0x80; \
+	else tmp_stick8 = (s8)tmp_stick16;
 
-enum { STICK_X, STICK_Y };
-static int getStickValue(joystick_t* j, int axis, int maxAbsValue){
-	double angle = PI * j->ang/180.0f;
-	double magnitude = (j->mag > 1.0f) ? 1.0f :
-	                    (j->mag < -1.0f) ? -1.0f : j->mag;
-	double value;
-	if(axis == STICK_X)
-		value = magnitude * sin( angle );
-	else
-		value = magnitude * cos( angle );
-	return (int)(value * maxAbsValue);
+static int getDRCValue(int in)
+{
+	//do scale, deadzone and clamp
+	s8 tmp_stick8; s16 tmp_stick16;
+	_DRC_BUILD_TMPSTICK(in);
+	return tmp_stick8;
 }
 
 enum {
@@ -62,21 +63,21 @@ enum {
 
 static button_t buttons[] = {
 	{  0, ~0,                         "None" },
-	{  1, CLASSIC_CTRL_BUTTON_UP,     "D-Up" },
-	{  2, CLASSIC_CTRL_BUTTON_LEFT,   "D-Left" },
-	{  3, CLASSIC_CTRL_BUTTON_RIGHT,  "D-Right" },
-	{  4, CLASSIC_CTRL_BUTTON_DOWN,   "D-Down" },
-	{  5, CLASSIC_CTRL_BUTTON_FULL_L, "L" },
-	{  6, CLASSIC_CTRL_BUTTON_FULL_R, "R" },
-	{  7, CLASSIC_CTRL_BUTTON_ZL,     "Left Z" },
-	{  8, CLASSIC_CTRL_BUTTON_ZR,     "Right Z" },
-	{  9, CLASSIC_CTRL_BUTTON_A,      "A" },
-	{ 10, CLASSIC_CTRL_BUTTON_B,      "B" },
-	{ 11, CLASSIC_CTRL_BUTTON_X,      "X" },
-	{ 12, CLASSIC_CTRL_BUTTON_Y,      "Y" },
-	{ 13, CLASSIC_CTRL_BUTTON_PLUS,   "+" },
-	{ 14, CLASSIC_CTRL_BUTTON_MINUS,  "-" },
-	{ 15, CLASSIC_CTRL_BUTTON_HOME,   "Home" },
+	{  1, WIIDRC_BUTTON_UP,     "D-Up" },
+	{  2, WIIDRC_BUTTON_LEFT,   "D-Left" },
+	{  3, WIIDRC_BUTTON_RIGHT,  "D-Right" },
+	{  4, WIIDRC_BUTTON_DOWN,   "D-Down" },
+	{  5, WIIDRC_BUTTON_L, "L" },
+	{  6, WIIDRC_BUTTON_R, "R" },
+	{  7, WIIDRC_BUTTON_ZL,     "Left Z" },
+	{  8, WIIDRC_BUTTON_ZR,     "Right Z" },
+	{  9, WIIDRC_BUTTON_A,      "A" },
+	{ 10, WIIDRC_BUTTON_B,      "B" },
+	{ 11, WIIDRC_BUTTON_X,      "X" },
+	{ 12, WIIDRC_BUTTON_Y,      "Y" },
+	{ 13, WIIDRC_BUTTON_PLUS,   "+" },
+	{ 14, WIIDRC_BUTTON_MINUS,  "-" },
+	{ 15, WIIDRC_BUTTON_HOME,   "Home" },
 	{ 16, R_STICK_U,                  "RS-Up" },
 	{ 17, R_STICK_L,                  "RS-Left" },
 	{ 18, R_STICK_R,                  "RS-Right" },
@@ -93,57 +94,45 @@ static button_t analog_sources[] = {
 };
 
 static button_t menu_combos[] = {
-	{ 0, CLASSIC_CTRL_BUTTON_X|CLASSIC_CTRL_BUTTON_Y, "X+Y" },
-	{ 1, CLASSIC_CTRL_BUTTON_ZL|CLASSIC_CTRL_BUTTON_ZR, "ZL+ZR" },
+	{ 0, WIIDRC_BUTTON_X|WIIDRC_BUTTON_Y, "X+Y" },
+	{ 1, WIIDRC_BUTTON_ZL|WIIDRC_BUTTON_ZR, "ZL+ZR" },
 };
 
-static unsigned int getButtons(classic_ctrl_t* controller)
+static unsigned int getButtons()
 {
-	unsigned int b = (unsigned)controller->btns;
-	s8 stickX      = getStickValue(&controller->ljs, STICK_X, 7);
-	s8 stickY      = getStickValue(&controller->ljs, STICK_Y, 7);
-	s8 substickX   = getStickValue(&controller->rjs, STICK_X, 7);
-	s8 substickY   = getStickValue(&controller->rjs, STICK_Y, 7);
-	
-	if(stickX    < -3) b |= L_STICK_L;
-	if(stickX    >  3) b |= L_STICK_R;
-	if(stickY    >  3) b |= L_STICK_U;
-	if(stickY    < -3) b |= L_STICK_D;
-	
-	if(substickX < -3) b |= R_STICK_L;
-	if(substickX >  3) b |= R_STICK_R;
-	if(substickY >  3) b |= R_STICK_U;
-	if(substickY < -3) b |= R_STICK_D;
+	const struct WiiDRCData *data = WiiDRC_Data();
+
+	unsigned int b = data->button;
+
+	if(data->xAxisL < -20) b |= L_STICK_L;
+	if(data->xAxisL >  20) b |= L_STICK_R;
+	if(data->yAxisL >  20) b |= L_STICK_U;
+	if(data->yAxisL < -20) b |= L_STICK_D;
+
+	if(data->xAxisR < -20) b |= R_STICK_L;
+	if(data->xAxisR >  20) b |= R_STICK_R;
+	if(data->yAxisR >  20) b |= R_STICK_U;
+	if(data->yAxisR < -20) b |= R_STICK_D;
 	
 	return b;
 }
 
 static int available(int Control) {
-	int err;
-	u32 expType;
-	err = WPAD_Probe(Control, &expType);
-	if(err == WPAD_ERR_NONE &&
-	   expType == WPAD_EXP_CLASSIC){
-		controller_Classic.available[Control] = 1;
+	if(Control == 0 && WiiDRC_Inited() && WiiDRC_Connected())
+	{
+		controller_DRC.available[Control] = 1;
 		return 1;
-	} else {
-		controller_Classic.available[Control] = 0;
-		if(err == WPAD_ERR_NONE &&
-		   expType == WPAD_EXP_NUNCHUK){
-			controller_WiimoteNunchuk.available[Control] = 1;
-		}
-		else if (err == WPAD_ERR_NONE &&
-		   expType == WPAD_EXP_NONE){
-			controller_Wiimote.available[Control] = 1;
-		}
+	}
+	else
+	{
+		controller_DRC.available[Control] = 0;
 		return 0;
 	}
 }
 
 static int _GetKeys(int Control, BUTTONS * Keys, controller_config_t* config)
 {
-	if(wpadNeedScan){ WPAD_ScanPads(); wpadNeedScan = 0; }
-	WPADData* wpad = WPAD_Data(Control);
+	if(drcNeedScan){ WiiDRC_ScanPads(); drcNeedScan = 0; }
 	BUTTONS* c = Keys;
 	memset(c, 0, sizeof(BUTTONS));
 
@@ -151,7 +140,7 @@ static int _GetKeys(int Control, BUTTONS * Keys, controller_config_t* config)
 	if(!available(Control))
 		return 0;
 
-	unsigned int b = getButtons(&wpad->exp.classic);
+	unsigned int b = getButtons();
 	inline int isHeld(button_tp button){
 		return (b & button->mask) == button->mask;
 	}
@@ -175,11 +164,11 @@ static int _GetKeys(int Control, BUTTONS * Keys, controller_config_t* config)
 	c->U_CBUTTON    = isHeld(config->CU);
 
 	if(config->analog->mask == L_STICK_AS_ANALOG){
-		c->X_AXIS = getStickValue(&wpad->exp.classic.ljs, STICK_X, 127);
-		c->Y_AXIS = getStickValue(&wpad->exp.classic.ljs, STICK_Y, 127);
+		c->X_AXIS = getDRCValue(WiiDRC_lStickX());
+		c->Y_AXIS = getDRCValue(WiiDRC_lStickY());
 	} else if(config->analog->mask == R_STICK_AS_ANALOG){
-		c->X_AXIS = getStickValue(&wpad->exp.classic.rjs, STICK_X, 127);
-		c->Y_AXIS = getStickValue(&wpad->exp.classic.rjs, STICK_Y, 127);
+		c->X_AXIS = getDRCValue(WiiDRC_rStickX());
+		c->Y_AXIS = getDRCValue(WiiDRC_rStickY());
 	}
 	if(config->invertedY) c->Y_AXIS = -c->Y_AXIS;
 
@@ -187,15 +176,11 @@ static int _GetKeys(int Control, BUTTONS * Keys, controller_config_t* config)
 	return isHeld(config->exit);
 }
 
-static void pause(int Control){
-	WPAD_Rumble(Control, 0);
-}
+static void pause(int Control){ }
 
 static void resume(int Control){ }
 
-static void rumble(int Control, int rumble){
-	WPAD_Rumble(Control, rumble ? 1 : 0);
-}
+static void rumble(int Control, int rumble){ }
 
 static void configure(int Control, controller_config_t* config){
 	// Don't know how this should be integrated
@@ -207,8 +192,8 @@ static void assign(int p, int v){
 
 static void refreshAvailable(void);
 
-controller_t controller_Classic =
-	{ 'C',
+controller_t controller_DRC =
+	{ 'D',
 	  _GetKeys,
 	  configure,
 	  assign,
@@ -244,17 +229,8 @@ controller_t controller_Classic =
 	 };
 
 static void refreshAvailable(void){
-
-	int i, err;
-	u32 expType;
-	WPAD_ScanPads();
+	int i;
 	for(i=0; i<4; ++i){
-		err = WPAD_Probe(i, &expType);
-		if(err == WPAD_ERR_NONE &&
-		   expType == WPAD_EXP_CLASSIC){
-			controller_Classic.available[i] = 1;
-			WPAD_SetDataFormat(i, WPAD_DATA_EXPANSION);
-		} else
-			controller_Classic.available[i] = 0;
+		available(i);
 	}
 }

@@ -1149,7 +1149,6 @@ void OGL_DrawTriangles()
 	glDrawArrays( GL_TRIANGLES, 0, OGL.numVertices );
 #else // !__GX__
 	GXColor GXcol;
-	float invW;
 
 #ifdef GLN64_SDLOG
 	sprintf(txtbuffer,"OGL_DrawTris: numTri %d, numVert %d, useT0 %d, useT1 %d\n", OGL.numTriangles, OGL.numVertices, combiner.usesT0, combiner.usesT1);
@@ -1161,25 +1160,9 @@ void OGL_DrawTriangles()
 	{
 		if(OGL.GXpolyOffset)
 		{
-			if(OGL.GXuseCombW)
-			{
-				if(!OGL.GXuseProjWnear)
-				{
-					CopyMatrix( OGL.GXprojTemp, OGL.GXcombW );
-					OGL.GXprojTemp[2][2] += GXpolyOffsetFactor;
-					GX_LoadProjectionMtx(OGL.GXprojTemp, GX_PERSPECTIVE); 
-				}
-				else
-				{
-					GX_LoadProjectionMtx(OGL.GXprojWnear, GX_PERSPECTIVE); 
-				}
-			}
-			else
-			{
-				CopyMatrix( OGL.GXprojTemp, OGL.GXprojIdent );
-				OGL.GXprojTemp[2][3] -= GXpolyOffsetFactor;
-				GX_LoadProjectionMtx(OGL.GXprojTemp, GX_ORTHOGRAPHIC); 
-			}
+			CopyMatrix( OGL.GXprojTemp, OGL.GXprojIdent );
+			OGL.GXprojTemp[2][3] -= GXpolyOffsetFactor;
+			GX_LoadProjectionMtx(OGL.GXprojTemp, GX_PERSPECTIVE); 
 		}
 		else
 		{
@@ -1194,19 +1177,7 @@ void OGL_DrawTriangles()
 				else
 					GX_LoadProjectionMtx(OGL.GXprojTemp, GX_ORTHOGRAPHIC); 
 			}*/
-			if(OGL.GXuseCombW)
-			{
-				if(!OGL.GXuseProjWnear)
-				{
-					GX_LoadProjectionMtx(OGL.GXcombW, GX_PERSPECTIVE); 
-				}
-				else
-				{
-					GX_LoadProjectionMtx(OGL.GXprojWnear, GX_PERSPECTIVE); 
-				}
-			}
-			else
-				GX_LoadProjectionMtx(OGL.GXprojIdent, GX_ORTHOGRAPHIC); 
+			GX_LoadProjectionMtx(OGL.GXprojIdent, GX_PERSPECTIVE); 
 		}
 		OGL.GXupdateMtx = false;
 	}
@@ -1252,22 +1223,13 @@ void OGL_DrawTriangles()
 
 
 #ifdef SHOW_DEBUG
-	if (OGL.GXuseCombW) CntTriProjW += OGL.numTriangles;
-	else CntTriOther += OGL.numTriangles;
-	if (OGL.GXuseCombW && OGL.GXuseProjWnear) CntTriNear += OGL.numTriangles;
+	CntTriOther += OGL.numTriangles;
 	if (OGL.GXpolyOffset) CntTriPolyOffset += OGL.numTriangles;
 #endif
 
 	GX_Begin(GX_TRIANGLES, GX_VTXFMT0, OGL.numVertices);
 	for (int i = 0; i < OGL.numVertices; i++) {
-		if(OGL.GXuseCombW)
-			GX_Position3f32( OGL.vertices[i].x, OGL.vertices[i].y, -OGL.vertices[i].w );
-//			GX_Position3f32( OGL.vertices[i].x, OGL.vertices[i].y, OGL.vertices[i].zPrime );
-		else
-		{
-			invW = (OGL.vertices[i].w != 0) ? 1/OGL.vertices[i].w : 0.0f;
-			GX_Position3f32( OGL.vertices[i].x*invW, OGL.vertices[i].y*invW, OGL.vertices[i].z*invW );
-		}
+		GX_Position3f32( OGL.vertices[i].x, OGL.vertices[i].y, -OGL.vertices[i].w );
 //		GX_Position3f32(OGL.vertices[i].x/OGL.vertices[i].w, OGL.vertices[i].y/OGL.vertices[i].w, OGL.vertices[i].z/OGL.vertices[i].w);
 		GXcol.r = (u8) (min(OGL.vertices[i].color.r,1.0)*255);
 		GXcol.g = (u8) (min(OGL.vertices[i].color.g,1.0)*255);
@@ -1331,32 +1293,19 @@ void OGL_DrawLine( SPVertex *vertices, int v0, int v1, float width )
 	GX_SetLineWidth( width * OGL.GXscaleX * 6, GX_TO_ZERO );
 
 	GXColor GXcol;
-	float invW;
 
 	//Update MV & P Matrices
 	if(OGL.GXupdateMtx)
 	{
 		if(OGL.GXpolyOffset)
 		{
-			if(OGL.GXuseCombW)
-			{
-				CopyMatrix( OGL.GXprojTemp, OGL.GXcombW );
-				OGL.GXprojTemp[2][2] += GXpolyOffsetFactor;
-				GX_LoadProjectionMtx(OGL.GXprojTemp, GX_PERSPECTIVE); 
-			}
-			else
-			{
-				CopyMatrix( OGL.GXprojTemp, OGL.GXprojIdent );
-				OGL.GXprojTemp[2][3] -= GXpolyOffsetFactor;
-				GX_LoadProjectionMtx(OGL.GXprojTemp, GX_ORTHOGRAPHIC); 
-			}
+			CopyMatrix( OGL.GXprojTemp, OGL.GXprojIdent );
+			OGL.GXprojTemp[2][3] -= GXpolyOffsetFactor;
+			GX_LoadProjectionMtx(OGL.GXprojTemp, GX_PERSPECTIVE); 
 		}
 		else
 		{
-			if(OGL.GXuseCombW)
-				GX_LoadProjectionMtx(OGL.GXcombW, GX_PERSPECTIVE); 
-			else
-				GX_LoadProjectionMtx(OGL.GXprojIdent, GX_ORTHOGRAPHIC); 
+			GX_LoadProjectionMtx(OGL.GXprojIdent, GX_PERSPECTIVE); 
 		}
 		OGL.GXupdateMtx = false;
 	}
@@ -1386,13 +1335,7 @@ void OGL_DrawLine( SPVertex *vertices, int v0, int v1, float width )
 	GX_Begin(GX_LINES, GX_VTXFMT0, 2);
 		for (int i = 0; i < 2; i++)
 		{
-			if(OGL.GXuseCombW)
-				GX_Position3f32( OGL.vertices[i].x, OGL.vertices[i].y, -OGL.vertices[i].w );
-			else
-			{
-				invW = (OGL.vertices[i].w != 0) ? 1/OGL.vertices[i].w : 0.0f;
-				GX_Position3f32( OGL.vertices[i].x*invW, OGL.vertices[i].y*invW, OGL.vertices[i].z*invW );
-			}
+			GX_Position3f32( OGL.vertices[i].x, OGL.vertices[i].y, -OGL.vertices[i].w );
 			color.r = vertices[v[i]].r;
 			color.g = vertices[v[i]].g;
 			color.b = vertices[v[i]].b;
