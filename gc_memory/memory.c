@@ -198,13 +198,13 @@ void (*rw_pif[8])() =
 
 
 // memory sections
-static unsigned long *readrdramreg[0xFFFF];
+static unsigned long *readrdramreg[0x10000];
 static unsigned long *readrspreg[0x30];
 static unsigned long *readrsp[0x10];
 static unsigned long *readmi[0x20];
 static unsigned long *readvi[0x40];
 static unsigned long *readai[0x20];
-static unsigned long *readpi[0xFFFF];
+static unsigned long *readpi[0x10000];
 static unsigned long *readri[0x30];
 static unsigned long *readsi[0x20];
 static unsigned long *readdp[0x30];
@@ -657,137 +657,56 @@ void free_memory()
 
 static void update_MI_init_mode_reg()
 {
-   MI_register.init_length = MI_register.w_mi_init_mode_reg & 0x7F;
-   if (MI_register.w_mi_init_mode_reg & 0x80) 
-     MI_register.init_mode = 0;
-   if (MI_register.w_mi_init_mode_reg & 0x100)
-     MI_register.init_mode = 1;
-   if (MI_register.w_mi_init_mode_reg & 0x200)
-     MI_register.ebus_test_mode = 0;
-   if (MI_register.w_mi_init_mode_reg & 0x400)
-     MI_register.ebus_test_mode = 1;
-   if (MI_register.w_mi_init_mode_reg & 0x800)
+   MI_register.mi_init_mode_reg &= ~0x7F; // init_length
+   MI_register.mi_init_mode_reg |= MI_register.w_mi_init_mode_reg & 0x7F;
+   if (MI_register.w_mi_init_mode_reg & 0x80) // clear init_mode
+     MI_register.mi_init_mode_reg &= ~0x80;
+   if (MI_register.w_mi_init_mode_reg & 0x100) // set init_mode
+     MI_register.mi_init_mode_reg |= 0x80;
+   if (MI_register.w_mi_init_mode_reg & 0x200) // clear ebus_test_mode
+     MI_register.mi_init_mode_reg &= ~0x100;
+   if (MI_register.w_mi_init_mode_reg & 0x400) // set ebus_test_mode
+     MI_register.mi_init_mode_reg |= 0x100;
+   if (MI_register.w_mi_init_mode_reg & 0x800) // clear DP interupt
      {
 	MI_register.mi_intr_reg &= 0xFFFFFFDF;
 	check_interupt();
      }
-   if (MI_register.w_mi_init_mode_reg & 0x1000)
-     MI_register.RDRAM_reg_mode=0;
-   if (MI_register.w_mi_init_mode_reg & 0x2000)
-     MI_register.RDRAM_reg_mode=1;
-   MI_register.mi_init_mode_reg = ((MI_register.init_length) |
-				   (MI_register.init_mode << 7) |
-				   (MI_register.ebus_test_mode << 8) |
-				   (MI_register.RDRAM_reg_mode << 9)
-				   );
+   if (MI_register.w_mi_init_mode_reg & 0x1000) // clear RDRAM_reg_mode
+     MI_register.mi_init_mode_reg &= ~0x200;
+   if (MI_register.w_mi_init_mode_reg & 0x2000) // set RDRAM_reg_mode
+     MI_register.mi_init_mode_reg |= 0x200;
 }
 
 static void update_MI_intr_mask_reg()
 {
-   if (MI_register.w_mi_intr_mask_reg & 0x1)   MI_register.SP_intr_mask = 0;
-   if (MI_register.w_mi_intr_mask_reg & 0x2)   MI_register.SP_intr_mask = 1;
-   if (MI_register.w_mi_intr_mask_reg & 0x4)   MI_register.SI_intr_mask = 0;
-   if (MI_register.w_mi_intr_mask_reg & 0x8)   MI_register.SI_intr_mask = 1;
-   if (MI_register.w_mi_intr_mask_reg & 0x10)  MI_register.AI_intr_mask = 0;
-   if (MI_register.w_mi_intr_mask_reg & 0x20)  MI_register.AI_intr_mask = 1;
-   if (MI_register.w_mi_intr_mask_reg & 0x40)  MI_register.VI_intr_mask = 0;
-   if (MI_register.w_mi_intr_mask_reg & 0x80)  MI_register.VI_intr_mask = 1;
-   if (MI_register.w_mi_intr_mask_reg & 0x100) MI_register.PI_intr_mask = 0;
-   if (MI_register.w_mi_intr_mask_reg & 0x200) MI_register.PI_intr_mask = 1;
-   if (MI_register.w_mi_intr_mask_reg & 0x400) MI_register.DP_intr_mask = 0;
-   if (MI_register.w_mi_intr_mask_reg & 0x800) MI_register.DP_intr_mask = 1;
-   MI_register.mi_intr_mask_reg = ((MI_register.SP_intr_mask) |
-				     (MI_register.SI_intr_mask << 1) |
-				     (MI_register.AI_intr_mask << 2) |
-				     (MI_register.VI_intr_mask << 3) |
-				     (MI_register.PI_intr_mask << 4) |
-				     (MI_register.DP_intr_mask << 5)
-				     );
+   if (MI_register.w_mi_intr_mask_reg & 0x1)   MI_register.mi_intr_mask_reg &= ~0x1; // clear SP mask
+   if (MI_register.w_mi_intr_mask_reg & 0x2)   MI_register.mi_intr_mask_reg |= 0x1; // set SP mask
+   if (MI_register.w_mi_intr_mask_reg & 0x4)   MI_register.mi_intr_mask_reg &= ~0x2; // clear SI mask
+   if (MI_register.w_mi_intr_mask_reg & 0x8)   MI_register.mi_intr_mask_reg |= 0x2; // set SI mask
+   if (MI_register.w_mi_intr_mask_reg & 0x10)  MI_register.mi_intr_mask_reg &= ~0x4; // clear AI mask
+   if (MI_register.w_mi_intr_mask_reg & 0x20)  MI_register.mi_intr_mask_reg |= 0x4; // set AI mask
+   if (MI_register.w_mi_intr_mask_reg & 0x40)  MI_register.mi_intr_mask_reg &= ~0x8; // clear VI mask
+   if (MI_register.w_mi_intr_mask_reg & 0x80)  MI_register.mi_intr_mask_reg |= 0x8; // set VI mask
+   if (MI_register.w_mi_intr_mask_reg & 0x100) MI_register.mi_intr_mask_reg &= ~0x10; // clear PI mask
+   if (MI_register.w_mi_intr_mask_reg & 0x200) MI_register.mi_intr_mask_reg |= 0x10; // set PI mask
+   if (MI_register.w_mi_intr_mask_reg & 0x400) MI_register.mi_intr_mask_reg &= ~0x20; // clear DP mask
+   if (MI_register.w_mi_intr_mask_reg & 0x800) MI_register.mi_intr_mask_reg |= 0x20; // set DP mask
 }
 
 
-void update_SP()
+static void do_SP_task()
 {
-   if (sp_register.w_sp_status_reg & 0x1)
-     sp_register.halt = 0;
-   if (sp_register.w_sp_status_reg & 0x2)
-     sp_register.halt = 1;
-   if (sp_register.w_sp_status_reg & 0x4)
-     sp_register.broke = 0;
-   if (sp_register.w_sp_status_reg & 0x8)
-     {
-	MI_register.mi_intr_reg &= 0xFFFFFFFE;
-	check_interupt();
-     }
-   if (sp_register.w_sp_status_reg & 0x10)
-     {
-	MI_register.mi_intr_reg |= 1;
-	check_interupt();
-     }
-   if (sp_register.w_sp_status_reg & 0x20)
-     sp_register.single_step = 0;
-   if (sp_register.w_sp_status_reg & 0x40)
-     sp_register.single_step = 1;
-   if (sp_register.w_sp_status_reg & 0x80)
-     sp_register.intr_break = 0;
-   if (sp_register.w_sp_status_reg & 0x100)
-     sp_register.intr_break = 1;
-   if (sp_register.w_sp_status_reg & 0x200)
-     sp_register.signal0 = 0;
-   if (sp_register.w_sp_status_reg & 0x400)
-     sp_register.signal0 = 1;
-   if (sp_register.w_sp_status_reg & 0x800)
-     sp_register.signal1 = 0;
-   if (sp_register.w_sp_status_reg & 0x1000)
-     sp_register.signal1 = 1;
-   if (sp_register.w_sp_status_reg & 0x2000)
-     sp_register.signal2 = 0;
-   if (sp_register.w_sp_status_reg & 0x4000)
-     sp_register.signal2 = 1;
-   if (sp_register.w_sp_status_reg & 0x8000)
-     sp_register.signal3 = 0;
-   if (sp_register.w_sp_status_reg & 0x10000)
-     sp_register.signal3 = 1;
-   if (sp_register.w_sp_status_reg & 0x20000)
-     sp_register.signal4 = 0;
-   if (sp_register.w_sp_status_reg & 0x40000)
-     sp_register.signal4 = 1;
-   if (sp_register.w_sp_status_reg & 0x80000)
-     sp_register.signal5 = 0;
-   if (sp_register.w_sp_status_reg & 0x100000)
-     sp_register.signal5 = 1;
-   if (sp_register.w_sp_status_reg & 0x200000)
-     sp_register.signal6 = 0;
-   if (sp_register.w_sp_status_reg & 0x400000)
-     sp_register.signal6 = 1;
-   if (sp_register.w_sp_status_reg & 0x800000)
-     sp_register.signal7 = 0;
-   if (sp_register.w_sp_status_reg & 0x1000000)
-     sp_register.signal7 = 1;
-   sp_register.sp_status_reg = ((sp_register.halt) |
-				(sp_register.broke << 1) |
-				(sp_register.dma_busy << 2) |
-				(sp_register.dma_full << 3) |
-				(sp_register.io_full << 4) |
-				(sp_register.single_step << 5) |
-				(sp_register.intr_break << 6) |
-				(sp_register.signal0 << 7) |
-				(sp_register.signal1 << 8) |
-				(sp_register.signal2 << 9) |
-				(sp_register.signal3 << 10) |
-				(sp_register.signal4 << 11) |
-				(sp_register.signal5 << 12) |
-				(sp_register.signal6 << 13) |
-				(sp_register.signal7 << 14)
-				);
-   //if (get_event(SP_INT)) return;
-   if (!(sp_register.w_sp_status_reg & 0x1) && 
-       !(sp_register.w_sp_status_reg & 0x4)) return;
-   if (!sp_register.halt && !sp_register.broke)
-     {
 	int save_pc = rsp_register.rsp_pc & ~0xFFF;
 	if (SP_DMEM[0xFC0/4] == 1)
 	  {
+	     if (dpc_register.dpc_status & 0x2) // DP frozen (DK64, BC)
+	       {
+		  // don't do the task now
+		  // the task will be done when DP is unfreezed (see update_DPC)
+		  return;
+	       }
+	     
 	     // unprotecting old frame buffers
 	     if(fBGetFrameBufferInfo && fBRead && fBWrite && 
 		frameBufferInfos[0].addr)
@@ -820,12 +739,6 @@ void update_SP()
 	     end_section(GFX_SECTION);
 	     rsp_register.rsp_pc |= save_pc;
 	     new_frame();
-	     
-	     MI_register.mi_intr_reg &= ~0x21;
-	     sp_register.sp_status_reg &= ~0x303;
-	     update_count();
-	     add_interupt_event(SP_INT, 1000);
-	     add_interupt_event(DP_INT, 1000);
 	     
 	     // protecting new frame buffers
 	     if(fBGetFrameBufferInfo && fBRead && fBWrite) fBGetFrameBufferInfo(frameBufferInfos);
@@ -877,58 +790,99 @@ void update_SP()
 	     doRspCycles(100);
 	     end_section(AUDIO_SECTION);
 	     rsp_register.rsp_pc |= save_pc;
-	     
-	     MI_register.mi_intr_reg &= ~0x1;
-	     sp_register.sp_status_reg &= ~0x303;
-	     update_count();
-	     //add_interupt_event(SP_INT, 500);
-	     add_interupt_event(SP_INT, 4000);
 	  }
 	else
 	  {
-	     //printf("other task\n");
 	     rsp_register.rsp_pc &= 0xFFF;
 	     doRspCycles(100);
 	     rsp_register.rsp_pc |= save_pc;
-	     
-	     MI_register.mi_intr_reg &= ~0x1;
-	     sp_register.sp_status_reg &= ~0x203;
-	     update_count();
-	     add_interupt_event(SP_INT, 0/*100*/);
 	  }
-	//printf("unknown task type\n");
-	/*if (hle) execute_dlist();
-	//if (hle) processDList();
-	else sp_register.halt = 0;*/
+}
+
+void update_SP()
+{
+   if (sp_register.w_sp_status_reg & 0x1) // clear halt
+     sp_register.sp_status_reg &= ~0x1;
+   if (sp_register.w_sp_status_reg & 0x2) // set halt
+     sp_register.sp_status_reg |= 0x1;
+   if (sp_register.w_sp_status_reg & 0x4) // clear broke
+     sp_register.sp_status_reg &= ~0x2;
+    if (sp_register.w_sp_status_reg & 0x8) // clear SP interupt
+     {
+	MI_register.mi_intr_reg &= 0xFFFFFFFE;
+	check_interupt();
      }
+    if (sp_register.w_sp_status_reg & 0x10) // set SP interupt
+     {
+	MI_register.mi_intr_reg |= 1;
+	check_interupt();
+     }
+   if (sp_register.w_sp_status_reg & 0x20) // clear single step
+     sp_register.sp_status_reg &= ~0x20;
+   if (sp_register.w_sp_status_reg & 0x40) // set single step
+     sp_register.sp_status_reg |= 0x20;
+   if (sp_register.w_sp_status_reg & 0x80) // clear interrupt on break
+     sp_register.sp_status_reg &= ~0x40;
+   if (sp_register.w_sp_status_reg & 0x100) // set interrupt on break
+     sp_register.sp_status_reg |= 0x40;
+   if (sp_register.w_sp_status_reg & 0x200) // clear signal 0
+     sp_register.sp_status_reg &= ~0x80;
+   if (sp_register.w_sp_status_reg & 0x400) // set signal 0
+     sp_register.sp_status_reg |= 0x80;
+   if (sp_register.w_sp_status_reg & 0x800) // clear signal 1
+     sp_register.sp_status_reg &= ~0x100;
+   if (sp_register.w_sp_status_reg & 0x1000) // set signal 1
+     sp_register.sp_status_reg |= 0x100;
+   if (sp_register.w_sp_status_reg & 0x2000) // clear signal 2
+     sp_register.sp_status_reg &= ~0x200;
+   if (sp_register.w_sp_status_reg & 0x4000) // set signal 2
+     sp_register.sp_status_reg |= 0x200;
+   if (sp_register.w_sp_status_reg & 0x8000) // clear signal 3
+     sp_register.sp_status_reg &= ~0x400;
+   if (sp_register.w_sp_status_reg & 0x10000) // set signal 3
+     sp_register.sp_status_reg |= 0x400;
+   if (sp_register.w_sp_status_reg & 0x20000) // clear signal 4
+     sp_register.sp_status_reg &= ~0x800;
+   if (sp_register.w_sp_status_reg & 0x40000) // set signal 4
+     sp_register.sp_status_reg |= 0x800;
+   if (sp_register.w_sp_status_reg & 0x80000) // clear signal 5
+     sp_register.sp_status_reg &= ~0x1000;
+   if (sp_register.w_sp_status_reg & 0x100000) // set signal 5
+     sp_register.sp_status_reg |= 0x1000;
+   if (sp_register.w_sp_status_reg & 0x200000) // clear signal 6
+     sp_register.sp_status_reg &= ~0x2000;
+   if (sp_register.w_sp_status_reg & 0x400000) // set signal 6
+     sp_register.sp_status_reg |= 0x2000;
+   if (sp_register.w_sp_status_reg & 0x800000) // clear signal 7
+     sp_register.sp_status_reg &= ~0x4000;
+   if (sp_register.w_sp_status_reg & 0x1000000) // set signal 7
+     sp_register.sp_status_reg |= 0x4000;
+
+   if (!(sp_register.w_sp_status_reg & 0x1) && 
+       !(sp_register.w_sp_status_reg & 0x4)) return;
+   if (!(sp_register.sp_status_reg & 0x3)) // !halt && !broke
+     do_SP_task();
 }
 
 void update_DPC()
 {
-   if (dpc_register.w_dpc_status & 0x1)
-     dpc_register.xbus_dmem_dma = 0;
-   if (dpc_register.w_dpc_status & 0x2)
-     dpc_register.xbus_dmem_dma = 1;
-   if (dpc_register.w_dpc_status & 0x4)
-     dpc_register.freeze = 0;
-   if (dpc_register.w_dpc_status & 0x8)
-     dpc_register.freeze = 1;
-   if (dpc_register.w_dpc_status & 0x10)
-     dpc_register.flush = 0;
-   if (dpc_register.w_dpc_status & 0x20)
-     dpc_register.flush = 1;
-   dpc_register.dpc_status = ((dpc_register.xbus_dmem_dma) |
-			      (dpc_register.freeze << 1) |
-			      (dpc_register.flush << 2) |
-			      (dpc_register.start_glck << 3) |
-			      (dpc_register.tmem_busy << 4) |
-			      (dpc_register.pipe_busy << 5) |
-			      (dpc_register.cmd_busy << 6) |
-			      (dpc_register.cbuf_busy << 7) |
-			      (dpc_register.dma_busy << 8) |
-			      (dpc_register.end_valid << 9) |
-			      (dpc_register.start_valid << 10)
-			      );
+   if (dpc_register.w_dpc_status & 0x1) // clear xbus_dmem_dma
+     dpc_register.dpc_status &= ~0x1;
+   if (dpc_register.w_dpc_status & 0x2) // set xbus_dmem_dma
+     dpc_register.dpc_status |= 0x1;
+   if (dpc_register.w_dpc_status & 0x4) // clear freeze
+     {
+	dpc_register.dpc_status &= ~0x2;
+	// see do_SP_task for more info
+	if (!(sp_register.sp_status_reg & 0x3)) // !halt && !broke
+	  do_SP_task();
+     }
+   if (dpc_register.w_dpc_status & 0x8) // set freeze
+     dpc_register.dpc_status |= 0x2;
+   if (dpc_register.w_dpc_status & 0x10) // clear flush
+     dpc_register.dpc_status &= ~0x4;
+   if (dpc_register.w_dpc_status & 0x20) // set flush
+     dpc_register.dpc_status |= 0x4;
 }
 
 void read_nothing()

@@ -157,7 +157,7 @@ void byte_swap(char* buffer, unsigned int length){
 		}
 	}
 }
-
+u32 subscreen_address;
 /* Loads the ROM into the ROM cache */
 int rom_read(fileBrowser_file* file){
 
@@ -200,6 +200,48 @@ int rom_read(fileBrowser_file* file){
   //Set VI limit based on ROM header
   InitTimer();
 
+  //Hack for OOT
+	subscreen_address = 0;
+    if (strncmp((char *)ROM_HEADER->nom, "THE LEGEND OF ZELDA", 19) == 0) {
+        if (sl(ROM_HEADER->CRC1) == 0xEC7011B7 && sl(ROM_HEADER->CRC2) == 0x7616D72B) {
+            // Legend of Zelda, The - Ocarina of Time (U) + (J) (V1.0)
+            subscreen_address = 0x1DA5CB;
+        } else if (sl(ROM_HEADER->CRC1) == 0xD43DA81F && sl(ROM_HEADER->CRC2) == 0x021E1E19) {
+            // Legend of Zelda, The - Ocarina of Time (U) + (J) (V1.1)
+            subscreen_address = 0x1DA78B;
+        } else if (sl(ROM_HEADER->CRC1) == 0x693BA2AE && sl(ROM_HEADER->CRC2) == 0xB7F14E9F) {
+            // Legend of Zelda, The - Ocarina of Time (U) + (J) (V1.2)
+            subscreen_address = 0x1DAE8B;
+        } else if (sl(ROM_HEADER->CRC1) == 0xB044B569 && sl(ROM_HEADER->CRC2) == 0x373C1985) {
+            // Legend of Zelda, The - Ocarina of Time (E) (V1.0)
+            subscreen_address = 0x1D860B;
+         } else if (sl(ROM_HEADER->CRC1) == 0xB2055FBD && sl(ROM_HEADER->CRC2) == 0x0BAB4E0C) {
+            // Legend of Zelda, The - Ocarina of Time (E) (V1.1)
+            subscreen_address = 0x1D864B;
+        // GC Versions
+        } else if (sl(ROM_HEADER->CRC1) == 0x1D4136F3 && sl(ROM_HEADER->CRC2) == 0xAF63EEA9) {
+            // Legend of Zelda, The - Ocarina of Time - Master Quest (E) (GC Version)
+            subscreen_address = 0x1D8F4B;
+        } else if (sl(ROM_HEADER->CRC1) == 0x09465AC3 && sl(ROM_HEADER->CRC2) == 0xF8CB501B) {
+            // Legend of Zelda, The - Ocarina of Time (E) (GC Version)
+            subscreen_address = 0x1D8F8B;
+        } else if (sl(ROM_HEADER->CRC1) == 0xF3DD35BA && sl(ROM_HEADER->CRC2) == 0x4152E075) {
+            // Legend of Zelda, The - Ocarina of Time (U) (GC Version) 
+            subscreen_address = 0x1DB78B;
+        } else if (sl(ROM_HEADER->CRC1) == 0xF034001A && sl(ROM_HEADER->CRC2) == 0xAE47ED06) {
+            // Legend of Zelda, The - Ocarina of Time - Master Quest (U) (GC Version)
+            subscreen_address = 0x1DB74B;
+        } else if (sl(ROM_HEADER->CRC1) == 0xF7F52DB8 && sl(ROM_HEADER->CRC2) == 0x2195E636) {
+            // Zelda no Densetsu - Toki no Ocarina - Zelda Collection Version (J) (GC Version) 
+            subscreen_address = 0x1DB78B;
+        } else if (sl(ROM_HEADER->CRC1) == 0xF611F4BA && sl(ROM_HEADER->CRC2) == 0xC584135C) {
+            // Zelda no Densetsu - Toki no Ocarina GC (J) (GC Version) 
+            subscreen_address = 0x1DB78B;
+        } else if (sl(ROM_HEADER->CRC1) == 0xF43B45BA && sl(ROM_HEADER->CRC2) == 0x2F0E9B6F) {
+            // Zelda no Densetsu - Toki no Ocarina GC Ura (J) (GC Version)
+            subscreen_address = 0x1DB78B;
+		}
+	}
    return ret;
 }
 

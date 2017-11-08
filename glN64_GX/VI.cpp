@@ -126,6 +126,9 @@ void VI_UpdateScreen()
 	}
 	glFinish();
 #else // !__GX__
+	//Hack for OOT
+	extern u32 subscreen_address;
+	if(subscreen_address) RDRAM[subscreen_address] = 2;
 	if (renderCpuFramebuffer)
 	{
 		//Only render N64 framebuffer in RDRAM and not EFB
